@@ -41,7 +41,7 @@ public:
 
 		// Convert internal byte per bit representation back to bits packed into
 		// given byte array.
-        size_t to_bitstring(byte *bytes, size_t offset, size_t num_bits) {
+        size_t to_bitstring(byte *bytes, size_t offset=0, size_t num_bits=0) {
 
                 if (num_bits == 0 || num_bits > blength)
                         num_bits = blength;
@@ -52,18 +52,18 @@ public:
                 register byte *bp = bytes;
 
                 for (size_t i = offset; i < end; i += BITS_PER_BYTE) {
-                        b  = *ba_ptr++ << 7;
-                        b |= *ba_ptr++ << 6;
-                        b |= *ba_ptr++ << 5;
-                        b |= *ba_ptr++ << 4;
-                        b |= *ba_ptr++ << 3;
-                        b |= *ba_ptr++ << 2;
-                        b |= *ba_ptr++ << 1;
-                        b |= *ba_ptr++;
+                        b  = (*ba_ptr++ & 1) << 7;
+                        b |= (*ba_ptr++ & 1) << 6;
+                        b |= (*ba_ptr++ & 1) << 5;
+                        b |= (*ba_ptr++ & 1) << 4;
+                        b |= (*ba_ptr++ & 1) << 3;
+                        b |= (*ba_ptr++ & 1) << 2;
+                        b |= (*ba_ptr++ & 1) << 1;
+                        b |= (*ba_ptr++ & 1);
                         *bp++ = b;
                 }
 
-                return  num_bits;
+                return num_bits;
         }
 
 #ifdef FBS_DEBUG

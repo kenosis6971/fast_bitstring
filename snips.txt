@@ -1,0 +1,11 @@
+
+        / &operator=(consttruct bit {
+ 34                 size_t i;
+ 35                 byte   bit;
+ 36         } bit;
+ 37
+ 38         const byte &operator=(const bit &b) {
+ 39                 barray[b.i] = b.bit;
+ 40                 return barray[b.i];
+ 41         }
+byte &other) {

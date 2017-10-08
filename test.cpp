@@ -1,6 +1,7 @@
-//
-//
-//
+/*
+ *	test.cpp
+ */
+
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,11 +19,11 @@ int test_create() {
 	}
 
 	{
-        static fast_bitstring::byte bits[] = {0xFF, 0xFF, 0xFF};
-        fast_bitstring fbs(bits, sizeof(bits));
-        assert(fbs.length() == 8 * sizeof(bits));
+        fast_bitstring::byte bytes[] = {0xFF, 0xFF, 0xFF};
+        fast_bitstring fbs(bytes, sizeof(bytes));
+        assert(fbs.length() == 8 * sizeof(bytes));
 
-		for (int i = 0; i < 8 * sizeof(bits); ++i)
+		for (int i = 0; i < 8 * sizeof(bytes); ++i)
 			assert(fbs[i] == 1);
 	}
 
@@ -50,16 +51,16 @@ int test_to_bitstring() {
 
         printf("\tTest to_bitstring...\n");
 
-        static fast_bitstring::byte bits[3] = {0x55, 0x55, 0x55};
-        static fast_bitstring::byte out_bits[3];
+        fast_bitstring::byte bytes[3] = {0x55, 0x55, 0x55};
+        fast_bitstring::byte out_bytes[3];
 
-        fast_bitstring fbs(bits, sizeof(bits));
+        fast_bitstring fbs(bytes, sizeof(bytes));
 
 #ifdef FBS_DEBUG
         fbs.dump();
 #endif
-		fbs.to_bitstring(out_bits, 0, 8 * fbs.length());
-        assert(strncmp((const char *)bits, (const char *)out_bits, sizeof(bits)) == 0);
+		fbs.to_bitstring(out_bytes, 0, 8 * fbs.length());
+        assert(strncmp((const char *)bytes, (const char *)out_bytes, sizeof(bytes)) == 0);
 
         return 1;
 }

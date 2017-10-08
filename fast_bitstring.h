@@ -1,9 +1,19 @@
+/*
+ *	fast_bitstring.h
+ *
+ *	Fast bit string converts a bit string packed into an array of bytes
+ *	into an array of bytes, one byte for each bit of the of the source
+ *	array of bits.  This representation is designed for two purposes only:
+ *	speed and convenience of use, i.e., KISS.
+ */
 
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+
 #define FBS_DEBUG
+
 
 class fast_bitstring {
 
@@ -11,33 +21,26 @@ public:
         typedef unsigned char byte;
 
         // Construct bit array of all zero bits.
-        fast_bitstring(const size_t length) {
-                // one byte per bit
-                blength = length * 8;
+        fast_bitstring(const size_t length_in_bytes) : BITS_PER_BYTE(8) {
+                blength = length_in_bytes * BITS_PER_BYTE;
                 barray = (byte *)calloc(blength, 1);
         }
 
-        // Construct bit array from given bit string.
-        fast_bitstring(const byte byte_array[], const size_t length) {
-                explode(byte_array, length);
+        // Construct bit array from given bit string backed in byte_array.
+        fast_bitstring(const byte byte_array[], const size_t length_in_bytes) : BITS_PER_BYTE(8) {
+                explode(byte_array, length_in_bytes);
         }
 
+		// Length of bit string in bits.
         inline size_t length() const { return blength; }
 
+		// Array opperator to access bit[i].
         inline byte &operator [](const size_t i) const {
                 return barray[i];
         }
 
-#ifdef FBS_DEBUG
-        void dump(void) const {
-                printf("Dumping...\n");
-                for (int i = 0; i < blength; ++i)
-                        printf ("%X ", barray[i]);
-				printf("\n");
-				fflush(stdout);
-        }
-#endif
-
+		// Convert internal byte per bit representation back to bits packed into
+		// given byte array.
         size_t to_bitstring(byte *bytes, size_t offset, size_t num_bits) {
 
                 if (num_bits == 0 || num_bits > blength)
@@ -46,61 +49,62 @@ public:
                 const size_t end = offset + num_bits;
                 register byte b;
                 register byte *ba_ptr = barray;
-                byte *bp = bytes;
+                register byte *bp = bytes;
 
-                for (size_t i = offset; i < end; i += 8) {
-                        b  = *barray++ << 7;
-                        b |= *barray++ << 6;
-                        b |= *barray++ << 5;
-                        b |= *barray++ << 4;
-                        b |= *barray++ << 3;
-                        b |= *barray++ << 2;
-                        b |= *barray++ << 1;
-                        b |= *barray++;
+                for (size_t i = offset; i < end; i += BITS_PER_BYTE) {
+                        b  = *ba_ptr++ << 7;
+                        b |= *ba_ptr++ << 6;
+                        b |= *ba_ptr++ << 5;
+                        b |= *ba_ptr++ << 4;
+                        b |= *ba_ptr++ << 3;
+                        b |= *ba_ptr++ << 2;
+                        b |= *ba_ptr++ << 1;
+                        b |= *ba_ptr++;
                         *bp++ = b;
                 }
 
                 return  num_bits;
         }
 
+#ifdef FBS_DEBUG
+        void dump(void) const {
+                printf("Dumping...\n");
+                for (int i = 0; i < blength; ++i)
+                        printf ("%u ", barray[i]);
+				printf("\n");
+				fflush(stdout);
+        }
+#endif
+
 protected:
 
         /*
          * Given a byte array containing a packed string of bits, explode the bits
          * into an array of bytes, one bit per byte.  Yes, this is an 8x increase
-         * in memory utlization but that is the classic time/space trade off.
+         * in memory utlization but that is the classic time/space trade off for you.
          */
         void explode(const byte byte_array[], const size_t length) {
 
-                byte b, mask, *ba;
+                register byte b, mask, *ba;
                 int i, blen;
 
-                blength = length * 8;
+                blength = length * BITS_PER_BYTE;
                 barray = (byte *)calloc(blength, 1);
 
                 for (i = 0, ba = barray; i < length; ++i) {
                         b = byte_array[i];
                         for (mask = 0x80; mask != 0x0; mask >>= 1) {
-                                // TODO: could be made into a look up table, 256 entries long, or just 16 w/two look ups?.
-                                // TODO: unwind this loop, at a minimum.
                                 if (b & mask) *ba = 0x1;
 								++ba;
                         }
                 }
         }
 
-        /*
-         * Reduce exploded internal byte representation of bit string to a packed bit string in bytes.
-         */
-        byte *implode() const {
-
-                return NULL;
-
-        }
-
 private:
-        fast_bitstring() {}
 
+        fast_bitstring() : BITS_PER_BYTE(8) {}
+
+		const size_t BITS_PER_BYTE;
         size_t blength;
         byte *barray;   // Array of bits, one per bit.
 

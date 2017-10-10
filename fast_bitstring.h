@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 #define FBS_DEBUG
@@ -31,16 +32,19 @@ public:
                 explode(byte_array, length_in_bytes);
         }
 
-		// Length of bit string in bits.
+	// Length of bit string in bits.
         inline size_t length() const { return blength; }
 
-		// Array opperator to access bit[i].
+	// Length of bit string in bits.
+        inline void clear() { memset((void *)barray, 0, blength); }
+
+	// Array opperator to access bit[i].
         inline byte &operator [](const size_t i) const {
                 return barray[i];
         }
 
-		// Convert internal byte per bit representation back to bits packed into
-		// given byte array.
+	// Convert internal byte per bit representation back to bits packed into
+	// given byte array.
         size_t to_bitstring(byte *bytes, size_t offset=0, size_t num_bits=0) {
 
                 if (num_bits == 0 || num_bits > blength)

@@ -15,6 +15,10 @@
 
 #define FBS_DEBUG
 
+/*
+ * If we encapsulate bit in a struct then we can overload = to ensure
+ * value is 0 or 1.
+ */
 
 class fast_bitstring {
 

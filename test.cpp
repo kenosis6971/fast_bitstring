@@ -14,14 +14,14 @@ int test_create() {
         printf("\tTest create...\n");
 
 	{
-        fast_bitstring fbs(3);
-        assert(fbs.length() == 8 * 3);
+        	fast_bitstring fbs(3);
+        	assert(fbs.length() == 8 * 3);
 	}
 
 	{
-        fast_bitstring::byte bytes[] = {0xFF, 0xFF, 0xFF};
-        fast_bitstring fbs(bytes, sizeof(bytes));
-        assert(fbs.length() == 8 * sizeof(bytes));
+        	fast_bitstring::byte bytes[] = {0xFF, 0xFF, 0xFF};
+        	fast_bitstring fbs(bytes, sizeof(bytes));
+        	assert(fbs.length() == 8 * sizeof(bytes));
 
 		for (int i = 0; i < 8 * sizeof(bytes); ++i)
 			assert(fbs[i] == 1);
@@ -58,9 +58,9 @@ int test_to_bitstring() {
         fbs.dump();
 #endif
         fast_bitstring::byte out_bytes[sizeof(bytes)];
-		size_t num_bits = fbs.to_bitstring(out_bytes);
 
-		assert(num_bits == fbs.length());
+	size_t num_bits = fbs.to_bitstring(out_bytes);
+	assert(num_bits == fbs.length());
         assert(strncmp((const char *)bytes, (const char *)out_bytes, sizeof(bytes)) == 0);
 
         return 1;
@@ -68,10 +68,12 @@ int test_to_bitstring() {
 
 
 int unit_test() {
-    printf("Running unit tests...\n");
+
+	printf("Running unit tests...\n");
 	assert(test_create());
 	assert(test_bits());
 	assert(test_to_bitstring());
+
 	return 0;
 }
 

@@ -101,9 +101,9 @@ protected:
 
 		for (i = 0, ba = barray; i < length; ++i) {
 			b = byte_array[i];
-			for (mask = 0x80; mask != 0x0; mask >>= 1) {
+			for (mask = 0x80; mask != 0x0; mask >>= 1, ++ba) {
+				// TODO: unroll this loop?
 				if (b & mask) *ba = 0x1;
-				++ba;
 			}
 		}
 	}

@@ -54,7 +54,7 @@ public:
 
 	// Convert internal byte per bit representation back to bits packed into
 	// given byte array.
-	size_t to_bitstring(byte *bytes, size_t offset=0, size_t num_bits=0) {
+	size_t to_bitstring(byte *bits, size_t offset=0, size_t num_bits=0) {
 
 		if (num_bits == 0 || num_bits > blength)
 			num_bits = blength;
@@ -62,17 +62,18 @@ public:
 		const size_t end = offset + num_bits;
 		register byte b;
 		register byte *bap = barray;
-		register byte *bp = bytes;
+		register byte *bp = bits;
 
 		for (size_t i = offset; i < end; i += BITS_PER_BYTE) {
-			b  = (*bap++ & 1) << 7;
+                        b  = 0;
+			b |= (*bap++ & 1) << 7;
 			b |= (*bap++ & 1) << 6;
 			b |= (*bap++ & 1) << 5;
 			b |= (*bap++ & 1) << 4;
 			b |= (*bap++ & 1) << 3;
 			b |= (*bap++ & 1) << 2;
 			b |= (*bap++ & 1) << 1;
-			b |= (*bap++ & 1);
+			b |= (*bap++ & 1) << 0;
 			*bp++ = b;
 		}
 
@@ -80,11 +81,10 @@ public:
 	}
 
 #ifdef FBS_DEBUG
-	void dump(const byte *bytes = NULL) const {
-		const byte *to_dump = bytes ? bytes : barray;
+	void dump(void) const {
 		printf("Dumping...\n");
 		for (int i = 0; i < blength; ++i)
-			printf ("%u ", (unsigned int)to_dump[i]);
+			printf ("%u ", (unsigned int)barray[i]);
 		printf("\n");
 		fflush(stdout);
 	}
@@ -101,16 +101,16 @@ protected:
 
 		register byte b, mask, *ba;
 		register size_t len = length_in_bits;
-		size_t i, off;
+		size_t i, o;
 
 		blength = length_in_bits;
-		barray = (byte *)calloc((length_in_bits / 8) + (length_in_bits % 8), 1);
+		barray = (byte *)calloc(length_in_bits, 1);
 
-		for (i = 0, off = offset_in_bits, ba = barray; len; ) {
+		for (i = 0, o = offset_in_bits, ba = barray; len; ) {
 			b = byte_array[i++];
 			for (mask = 0x80; mask && len; mask >>= 1) {
 				// Skip first "offset" bits.
-				if (off > 0) { --off; continue; }
+				if (o > 0) { --o; continue; }
 				if (b & mask) *ba = 0x1;
 				++ba;
 				--len;

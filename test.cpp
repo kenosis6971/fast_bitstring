@@ -65,21 +65,14 @@ int test_to_bitstring() {
 
 	printf("\tTest to_bitstring...\n");
 
-	fast_bitstring::byte bytes[] = {0xFF, 0xFF, 0xFF, 0x55, 0xFF};
-	//fast_bitstring::byte bytes[] = {0xFF, 0x55, 0x00, 0x55, 0xFF};
+	fast_bitstring::byte bytes[] = {0xFF, 0x55, 0x00, 0x55, 0xFF};
 	fast_bitstring fbs(bytes, sizeof(bytes));
 
 #ifdef FBS_DEBUG
 	fbs.dump();
 #endif
-
 	fast_bitstring::byte out_bytes[sizeof(bytes)];
-
 	size_t num_bits = fbs.to_bitstring(out_bytes);
-
-#ifdef FBS_DEBUG
-	fbs.dump(out_bytes);
-#endif
 
 	assert(num_bits == fbs.length());
 	assert(strncmp((const char *)bytes, (const char *)out_bytes, sizeof(bytes)) == 0);

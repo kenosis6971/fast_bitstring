@@ -33,7 +33,12 @@ public:
 
 	// Construct bit array from given bit string backed in byte_array.
 	fast_bitstring(const byte byte_array[], const size_t length_in_bytes) : BITS_PER_BYTE(8) {
-	explode(byte_array, length_in_bytes);
+		explode(byte_array, 0, length_in_bytes * BITS_PER_BYTE);
+	}
+
+	// Construct bit array from given bit string backed in byte_array.
+	fast_bitstring(const byte byte_array[], const size_t offset_in_bits, const size_t length_in_bits) : BITS_PER_BYTE(8) {
+		explode(byte_array, offset_in_bits, length_in_bits);
 	}
 
 	// Length of bit string in bits.
@@ -75,10 +80,11 @@ public:
 	}
 
 #ifdef FBS_DEBUG
-	void dump(void) const {
+	void dump(const byte *bytes = NULL) const {
+		const byte *to_dump = bytes ? bytes : barray;
 		printf("Dumping...\n");
 		for (int i = 0; i < blength; ++i)
-			printf ("%u ", barray[i]);
+			printf ("%u ", (unsigned int)to_dump[i]);
 		printf("\n");
 		fflush(stdout);
 	}
@@ -91,19 +97,23 @@ protected:
 	 * into an array of bytes, one bit per byte.  Yes, this is an 8x increase
 	 * in memory utlization but that is the classic time/space trade off for you.
 	 */
-	void explode(const byte byte_array[], const size_t length) {
+	void explode(const byte byte_array[], const size_t offset_in_bits, const size_t length_in_bits) {
 
 		register byte b, mask, *ba;
-		int i, blen;
+		register size_t len = length_in_bits;
+		size_t i, off;
 
-		blength = length * BITS_PER_BYTE;
-		barray = (byte *)calloc(blength, 1);
+		blength = length_in_bits;
+		barray = (byte *)calloc((length_in_bits / 8) + (length_in_bits % 8), 1);
 
-		for (i = 0, ba = barray; i < length; ++i) {
-			b = byte_array[i];
-			for (mask = 0x80; mask != 0x0; mask >>= 1, ++ba) {
-				// TODO: unroll this loop?
+		for (i = 0, off = offset_in_bits, ba = barray; len; ) {
+			b = byte_array[i++];
+			for (mask = 0x80; mask && len; mask >>= 1) {
+				// Skip first "offset" bits.
+				if (off > 0) { --off; continue; }
 				if (b & mask) *ba = 0x1;
+				++ba;
+				--len;
 			}
 		}
 	}
@@ -113,8 +123,8 @@ private:
 	fast_bitstring() : BITS_PER_BYTE(8) {}
 
 	const size_t BITS_PER_BYTE;
-	size_t blength;
-	byte *barray;   // Array of bits, one per bit.
+	size_t blength;	// length of bit array, one byte per bit.
+	byte *barray;   // Array of bits, one byte per bit.
 
 };
 

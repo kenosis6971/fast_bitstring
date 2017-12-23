@@ -88,15 +88,14 @@ public:
 		return num_bits;
 	}
 
-#ifdef FBS_DEBUG
-	void dump(void) const {
-		printf("Dumping...\n");
-		for (int i = 0; i < blength; ++i)
-			printf ("%u ", (unsigned int)barray[i]);
-		printf("\n");
-		fflush(stdout);
+	void write(FILE *f = NULL) const {
+                if (!f) f = stdout;
+		for (int i = 0; i < blength; ++i) {
+			fprintf (f, "%u ", (unsigned int)barray[i]);
+                }
+		fprintf(f, "\n");
+		fflush(f);
 	}
-#endif
 
 protected:
 

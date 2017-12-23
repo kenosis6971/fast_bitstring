@@ -7,6 +7,9 @@
  *	speed and convenience of use, i.e., KISS.
  */
 
+#ifndef _FAST_BITSTRING_H
+#define _FAST_BITSTRING_H
+
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,6 +42,11 @@ public:
 	// Construct bit array from given bit string backed in byte_array.
 	fast_bitstring(const byte byte_array[], const size_t offset_in_bits, const size_t length_in_bits) : BITS_PER_BYTE(8) {
 		explode(byte_array, offset_in_bits, length_in_bits);
+	}
+
+	~fast_bitstring() {
+		delete barray;
+		barray = NULL;
 	}
 
 	// Length of bit string in bits.
@@ -120,11 +128,13 @@ protected:
 
 private:
 
+	const size_t BITS_PER_BYTE;
+
 	fast_bitstring() : BITS_PER_BYTE(8) {}
 
-	const size_t BITS_PER_BYTE;
 	size_t blength;	// length of bit array, one byte per bit.
 	byte *barray;   // Array of bits, one byte per bit.
 
 };
 
+#endif

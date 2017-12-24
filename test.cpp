@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "fast_bitstring.h"
 
@@ -68,7 +69,11 @@ int test_to_bitstring() {
 	fast_bitstring::byte bytes[] = {0xFF, 0x55, 0x00, 0x55, 0xFF};
 	fast_bitstring fbs(bytes, sizeof(bytes));
 
-	fbs.write();
+	fbs.to_file();
+
+        unlink("./foo.out");
+        fbs.save("./foo.out");
+        assert(unlink("./foo.out") == 0);
 
 	fast_bitstring::byte out_bytes[sizeof(bytes)];
 	size_t num_bits = fbs.to_bitstring(out_bytes);

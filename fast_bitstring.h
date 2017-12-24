@@ -10,10 +10,12 @@
 #ifndef _FAST_BITSTRING_H
 #define _FAST_BITSTRING_H
 
+#include <fcntl.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 
 #define FBS_DEBUG
@@ -45,7 +47,7 @@ public:
 	}
 
 	~fast_bitstring() {
-		delete barray;
+		free(barray);
 		barray = NULL;
 	}
 
@@ -62,7 +64,7 @@ public:
 
 	// Convert internal byte per bit representation back to bits packed into
 	// given byte array.
-	size_t to_bitstring(byte *bits, size_t offset=0, size_t num_bits=0) {
+	size_t to_bitstring(byte *bits, size_t offset=0, size_t num_bits=0) const {
 
 		if (num_bits == 0 || num_bits > blength)
 			num_bits = blength;
@@ -88,14 +90,28 @@ public:
 		return num_bits;
 	}
 
-	void write(FILE *f = NULL) const {
+	size_t to_file(FILE *f = NULL, size_t n = ~0) const {
                 if (!f) f = stdout;
-		for (int i = 0; i < blength; ++i) {
+		for (size_t i = 0; i < blength && i < n; ++i) {
 			fprintf (f, "%u ", (unsigned int)barray[i]);
                 }
 		fprintf(f, "\n");
 		fflush(f);
+
+                return blength;
 	}
+
+        size_t save(const char *filename) const {
+
+                size_t len = blength / 8;
+                byte *bits = (byte *)malloc(len);
+                to_bitstring(bits);
+
+                int fd = open(filename, O_CREAT | O_WRONLY);
+                size_t n = write(fd, bits, len);
+                free(bits);
+                return n;
+        }
 
 protected:
 

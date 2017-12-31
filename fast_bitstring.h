@@ -91,27 +91,30 @@ public:
 	}
 
 	size_t to_file(FILE *f = NULL, size_t n = ~0) const {
-                if (!f) f = stdout;
+
+		if (!f) f = stdout;
+
 		for (size_t i = 0; i < blength && i < n; ++i) {
 			fprintf (f, "%u ", (unsigned int)barray[i]);
-                }
+		}
 		fprintf(f, "\n");
+
 		fflush(f);
 
-                return blength;
+		return blength;
 	}
 
-        size_t save(const char *filename) const {
+	size_t save(const char *filename) const {
 
-                size_t len = blength / 8;
-                byte *bits = (byte *)malloc(len);
-                to_bitstring(bits);
+		size_t len = blength / 8;
+		byte *bits = (byte *)malloc(len);
+		to_bitstring(bits);
 
-                int fd = open(filename, O_CREAT | O_WRONLY);
-                size_t n = write(fd, bits, len);
-                free(bits);
-                return n;
-        }
+		int fd = open(filename, O_CREAT | O_WRONLY);
+		size_t n = write(fd, bits, len);
+		free(bits);
+		return n;
+	}
 
 protected:
 

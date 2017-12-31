@@ -9,8 +9,9 @@
 int
 main(int argc, char *argv[]) {
 
-	if (argc > 1)
-                exit(unit_test());
+	if (argc > 1) {
+		exit(unit_test());
+	}
 
 	return 0;
 }

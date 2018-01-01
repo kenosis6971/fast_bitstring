@@ -1,7 +1,6 @@
 #
 # Makefile
 #
-GALIBPATH = ../galib
 CCFLAGS = -I .
 LIBPATH =
 LIBS = -lstdc++

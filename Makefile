@@ -1,7 +1,7 @@
 #
 # Makefile
 #
-CCFLAGS = -I .
+CCFLAGS = -g -I . -DDEBUG=1 -DTRACE=1
 LIBPATH =
 LIBS = -lstdc++
 SRCS = fast_bitstring.cpp main.cpp test.cpp
@@ -24,3 +24,9 @@ clean:
 
 distclean: clean
 	$(RM) $(BIN)
+
+test: clean all
+	./fbs test
+
+tags:
+	ctags *.cpp *.h

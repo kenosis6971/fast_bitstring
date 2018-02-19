@@ -62,24 +62,87 @@ int test_bits() {
 }
 
 
-int test_to_bitstring() {
+int test_to_file() {
 
-	printf("\tTest to_bitstring...\n");
+	printf("\tTest to_file...\n");
 
 	fast_bitstring::byte bytes[] = {0xFF, 0x55, 0x00, 0x55, 0xFF};
 	fast_bitstring fbs(bytes, sizeof(bytes));
 
 	fbs.to_file();
 
+	return 1;
+}
+
+
+int test_save() {
+
+	printf("\tTest save...\n");
+
+	fast_bitstring::byte bytes[] = {0xFF, 0x55, 0x00, 0x55, 0xFF};
+	fast_bitstring fbs(bytes, sizeof(bytes));
+
         unlink("./foo.out");
         fbs.save("./foo.out");
         assert(unlink("./foo.out") == 0);
 
-	fast_bitstring::byte out_bytes[sizeof(bytes)];
-	size_t num_bits = fbs.to_bitstring(out_bytes);
+	return 1;
+}
 
-	assert(num_bits == fbs.length());
+
+int test_to_byte() {
+
+	printf("\tTest to_byte...\n");
+
+	fast_bitstring::byte bytes[] = {0xFF, 0x55, 0x00, 0x55, 0xFF};
+	fast_bitstring fbs(bytes, sizeof(bytes));
+
+	fast_bitstring::byte out_bytes[sizeof(bytes)];
+	size_t num_bytes = fbs.to_bytes(out_bytes);
+
+	assert(num_bytes == sizeof(bytes));
 	assert(strncmp((const char *)bytes, (const char *)out_bytes, sizeof(bytes)) == 0);
+
+	return 1;
+}
+
+
+int test_to_bytes() {
+
+	printf("\tTest to_bytes...\n");
+
+	fast_bitstring::byte bytes[] = {0xFF, 0x55, 0x00, 0x55, 0xFF};
+	fast_bitstring fbs(bytes, sizeof(bytes));
+
+	fast_bitstring::byte out_bytes[sizeof(bytes)];
+	size_t num_bytes = fbs.to_bytes(out_bytes);
+
+	assert(num_bytes == sizeof(bytes));
+	assert(strncmp((const char *)bytes, (const char *)out_bytes, sizeof(bytes)) == 0);
+
+	return 1;
+}
+
+
+int test_rle() {
+
+	printf("\tTest rle...\n");
+
+        // RLE should be: 1 + 3 + 1 + 3 = 8
+	fast_bitstring::byte bytes[] = {0xFF, 0xFF, 0x55, 0x00, 0x00, 0x00, 0x55};
+	fast_bitstring fbs(bytes, sizeof(bytes));
+
+        fast_bitstring::byte *rle_bytes = NULL;
+
+	size_t num_bytes = fbs.run_length_encode(&rle_bytes);
+        printf("# rle bytes: %lu\n", num_bytes);
+
+	assert(rle_bytes != NULL);
+        assert(num_bytes == 8);
+
+	//fast_bitstring::byte derle_bytes[sizeof(bytes)];
+        //fbs.run_length_decode(rle_bytes, num_bytes);
+	//assert(strncmp((const char *)bytes, (const char *)derle_bytes, sizeof(bytes)) == 0);
 
 	return 1;
 }
@@ -88,9 +151,13 @@ int test_to_bitstring() {
 int unit_test() {
 
 	printf("Running unit tests...\n");
-	assert(test_create());
-	assert(test_bits());
-	assert(test_to_bitstring());
+	//assert(test_create());
+	//assert(test_bits());
+	//assert(test_save());
+	//assert(test_to_file());
+	//assert(test_to_byte());
+	//assert(test_to_bytes());
+	assert(test_rle());
 
 	return 0;
 }

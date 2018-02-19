@@ -10,6 +10,7 @@
 #ifndef _FAST_BITSTRING_H
 #define _FAST_BITSTRING_H
 
+#include <assert.h>
 #include <fcntl.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -26,6 +27,9 @@
  */
 
 class fast_bitstring {
+
+protected:
+        typedef fast_bitstring fbs;
 
 public:
 	typedef unsigned char byte;
@@ -64,7 +68,7 @@ public:
 
 	// Convert internal byte per bit representation back to bits packed into
 	// given byte array.
-	size_t to_bitstring(byte *bits, size_t offset=0, size_t num_bits=0) const {
+	size_t to_bytes(byte *bits, size_t offset=0, size_t num_bits=0) const {
 
 		if (num_bits == 0 || num_bits > blength)
 			num_bits = blength;
@@ -73,21 +77,23 @@ public:
 		register byte b;
 		register byte *bap = barray;
 		register byte *bp = bits;
+                size_t n = 0;
 
-		for (size_t i = offset; i < end; i += BITS_PER_BYTE) {
+		for (size_t i = offset; i < end; ++i) {
                         b  = 0;
 			b |= (*bap++ & 1) << 7;
-			b |= (*bap++ & 1) << 6;
-			b |= (*bap++ & 1) << 5;
-			b |= (*bap++ & 1) << 4;
-			b |= (*bap++ & 1) << 3;
-			b |= (*bap++ & 1) << 2;
-			b |= (*bap++ & 1) << 1;
-			b |= (*bap++ & 1) << 0;
+                        if (++i < end) b |= (*bap++ & 1) << 6;
+			if (++i < end) b |= (*bap++ & 1) << 5;
+			if (++i < end) b |= (*bap++ & 1) << 4;
+			if (++i < end) b |= (*bap++ & 1) << 3;
+			if (++i < end) b |= (*bap++ & 1) << 2;
+			if (++i < end) b |= (*bap++ & 1) << 1;
+			if (++i < end) b |= (*bap++ & 1) << 0;
 			*bp++ = b;
+                        n++;
 		}
 
-		return num_bits;
+		return n;
 	}
 
 	size_t to_file(FILE *f = NULL, size_t n = ~0) const {
@@ -108,13 +114,159 @@ public:
 
 		size_t len = blength / 8;
 		byte *bits = (byte *)malloc(len);
-		to_bitstring(bits);
+		to_bytes(bits);
 
 		int fd = open(filename, O_CREAT | O_WRONLY);
 		size_t n = write(fd, bits, len);
 		free(bits);
 		return n;
 	}
+
+        //
+        // Adaptive Run Length Encoding Format:
+        //
+        //      - Byte-level encoded; no header.
+        //      - If byte > 128 then byte represents (byte - 128) 1 bits.
+        //      - If byte is < 128 then byte represents byte 0 bits.
+        //      - If byte == 128 then the *next* byte is the count of the following
+        //        literal bits packed into bytes, where the count 1...256 mapped to
+        //        0...255 so we don't losse a bit.
+        //      - When calculating a run, it must be 9 bits or longer otherwise it is
+        //        deemed unfit to be a run and is appended to the current run of literal
+        //        bits.
+        //
+        // Can we estimate the length of the final RLE so we don't have to realloc or be too
+        // conservative.
+        //
+        // Returns the number of bytes bit was encoded to, and if the input is non-null then
+        // a pointer to the encoded bits as a byte array.
+        //
+        size_t run_length_encode(byte **encoding) const {
+
+                const size_t len = this->blength - 1;   // RLE looks one ahead, so stop before last bit.
+                size_t  run_len;                        // Length of the current run.
+                fbs     verbatim_bits(256);             // Current run of verbatim bits.
+                size_t  v = 0;                          // Index into current run of verbatim bits.
+                byte *  bits = this->barray;            // Bits being run-length encoded.
+                size_t  b = 0;                          // Index of current RLE byte
+
+                // Worst case length is all of the this bit string's bits packed into
+                // bytes + the "128" sentinal bytes for each 256 bit verbatim segment +
+                // the count bytes for all 256 bit verbatim segments + 2 for rounding
+                // the divisions.
+                size_t  worst_case_rle_len = (this->blength / 8)         // bits packed into bytes
+                                           + ((this->blength / 256) * 2) // # of sentinal and count byte
+                                           + 2;                          // rounding for divisions
+                byte *  rle_bytes = (byte *)calloc(1, worst_case_rle_len);
+
+                if (TRACE) {
+                        printf("Worst case REL len: %lu\n", worst_case_rle_len);
+                }
+
+                // !!! Make sure last bit is not stranded (len is blength-1).
+                for (size_t i = 0; i < len; ++i) {
+
+                        // Store starting index when checking for a new run, so if the run is too short
+                        // to be encoded we can know from where to start copying verbatim bits.
+                        size_t h = i;
+
+                        // Calculate the current run length: a sequence of contiguous 1's or 0's.
+                        // TODO: need to allow a verbatim run to go up to 256, if possible.
+                        for (run_len = 1; bits[i + 1] == bits[i] && run_len < 127 && i < len; ++i) {
+                                run_len += 1;
+                        }
+
+                        if (run_len > 8) {
+                                // Store any residual verbatim bits before appending the new run.
+
+                                if (v > 0) {
+                                        if (TRACE) printf("New run: appending %lu verbatim bits\n", v);
+                                        assert(v <= 256);
+                                        rle_bytes[b++] = 128;
+                                        // Store bytes at b + 1 to leave room for the actual byte count
+                                        // to come after the 128 sentinal and before the verbatim bits.
+                                        size_t y = verbatim_bits.to_bytes(&rle_bytes[b + 1], 0, v);
+                                        fprintf(stderr, "y:%lu, v:%lu, vb:%lu\n", y, v, ((v / 8) + ((v % 8) ? 1 : 0))); fflush(stderr);
+                                        assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));
+                                        rle_bytes[b++] = (byte)(v - 1);
+                                        b += y;
+                                        v = 0;
+                                }
+
+                                // Append run encoded as a single byte: < 128 = run of 0's, > 128 = run of 1's
+                                if (TRACE) printf("Appending run of %lu %c's\n", run_len, bits[h] ? '1' : '0');
+                                assert(run_len < 128);
+                                rle_bytes[b] = run_len;
+                                if (bits[h]) rle_bytes[b] += 128;
+                                b++;
+                                assert(b <= worst_case_rle_len);
+
+                        } else {
+                                // Append verbatim bits to the verbatim bits fbs.
+                                assert(run_len > 0);
+                                if (TRACE) printf("Accumulating %lu verbatim bits\n", run_len);
+
+                                while (run_len-- > 0) {
+                                        if (v == 256) {
+                                                // verbatim bits is full so append them to the rle bytes.
+                                                if (TRACE) printf("VFBS full: appending 128 verbatim bits.\n");
+                                                rle_bytes[b++] = 128;
+                                                // Store bytes at b + 1 to leave room for the actual byte count
+                                                // to come after the 128 sentinal and before the verbatim bits.
+                                                size_t y = verbatim_bits.to_bytes(&rle_bytes[b + 1], 0, v);
+                                                fprintf(stderr, "y:%lu, v:%lu, vb:%lu\n", y, v, ((v / 8) + ((v % 8) ? 1 : 0))); fflush(stderr);
+                                                assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));
+                                                rle_bytes[b++] = v - 1;
+                                                b += y;
+                                                assert(b <= worst_case_rle_len);
+                                                v = 0;
+                                        }
+                                        verbatim_bits[v++] = bits[h++];
+                                }
+                        }
+                }
+
+                if (v > 0) {
+                        // Finally append any remaining residual verbatim bits, if the tail of the
+                        // bit string did not end on a run.
+                        if (TRACE) printf("Appending %lu residual verbatim bits.\n", v);
+                        rle_bytes[b++] = 128;
+                        // Store bytes at b + 1 to leave room for the actual byte count
+                        // to come after the 128 sentinal and before the verbatim bits.
+                        size_t y = verbatim_bits.to_bytes(&rle_bytes[b + 1], 0, v);
+                        fprintf(stderr, "y:%lu, v:%lu, vb:%lu\n", y, v, ((v / 8) + ((v % 8) ? 1 : 0))); fflush(stderr);
+                        assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));
+                        rle_bytes[b++] = v - 1;
+                        b += y;
+                        assert(b <= worst_case_rle_len);
+                        v = 0;
+                }
+
+                if (encoding)
+                        *encoding = rle_bytes;
+                else
+                        free(rle_bytes);
+
+                assert(b <= worst_case_rle_len);
+                return b;
+        }
+
+        // TODO: This needs to be init tested.
+        byte to_byte(size_t i) const {
+
+                size_t byte = 0;
+                size_t mask = 0x7;
+                size_t j = i + 8;
+
+                if (j >= this->blength) j = this->blength;
+
+                for (; i < j; ++i, mask >>= 1) {
+                        if (this->barray[i])
+                                byte |= mask;
+                }
+
+                return byte;
+        }
 
 protected:
 

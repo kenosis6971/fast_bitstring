@@ -128,21 +128,63 @@ int test_rle() {
 
 	printf("\tTest rle...\n");
 
-        // RLE should be: 1 + 3 + 1 + 3 = 8
-	fast_bitstring::byte bytes[] = {0xFF, 0xFF, 0x55, 0x00, 0x00, 0x00, 0x55};
-	fast_bitstring fbs(bytes, sizeof(bytes));
+        {
+	        fast_bitstring::byte bytes[] = {0x00};
+	        fast_bitstring fbs(bytes, sizeof(bytes));
+                fast_bitstring::byte *rle_bytes = NULL;
+	        size_t num_bytes = fbs.run_length_encode(&rle_bytes);
+                printf("# rle bytes: %lu\n", num_bytes);
+	        assert(rle_bytes != NULL);
+                assert(num_bytes == 1);
+        }
 
-        fast_bitstring::byte *rle_bytes = NULL;
+        {
+                // A byte that is not a run of 0's or 1's
+	        fast_bitstring::byte bytes[] = {0x75};
+	        fast_bitstring fbs(bytes, sizeof(bytes));
+                fast_bitstring::byte *rle_bytes = NULL;
+	        size_t num_bytes = fbs.run_length_encode(&rle_bytes);
+                printf("# rle bytes: %lu\n", num_bytes);
+	        assert(rle_bytes != NULL);
+                assert(num_bytes == 1);
+        }
 
-	size_t num_bytes = fbs.run_length_encode(&rle_bytes);
-        printf("# rle bytes: %lu\n", num_bytes);
+        {
+                // A 9 bit run
+	        fast_bitstring::byte bytes[] = {0xFF, 0xFF};
+	        fast_bitstring fbs(bytes, 0, 9);
+                fast_bitstring::byte *rle_bytes = NULL;
+	        size_t num_bytes = fbs.run_length_encode(&rle_bytes);
+                printf("# rle bytes: %lu\n", num_bytes);
+	        assert(rle_bytes != NULL);
+                assert(num_bytes == 1);
+        }
 
-	assert(rle_bytes != NULL);
-        assert(num_bytes == 8);
+        {
+	        fast_bitstring::byte bytes[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+	        fast_bitstring fbs(bytes, sizeof(bytes));
+                fast_bitstring::byte *rle_bytes = NULL;
+	        size_t num_bytes = fbs.run_length_encode(&rle_bytes);
+                printf("# rle bytes: %lu\n", num_bytes);
+	        assert(rle_bytes != NULL);
+                assert(num_bytes == 1);
+        }
 
-	//fast_bitstring::byte derle_bytes[sizeof(bytes)];
-        //fbs.run_length_decode(rle_bytes, num_bytes);
-	//assert(strncmp((const char *)bytes, (const char *)derle_bytes, sizeof(bytes)) == 0);
+        {
+	        fast_bitstring::byte bytes[] = {0xFF, 0xFF, 0x55, 0x00, 0x00, 0x00, 0x55};
+	        fast_bitstring fbs(bytes, sizeof(bytes));
+                fast_bitstring::byte *rle_bytes = NULL;
+	        size_t num_bytes = fbs.run_length_encode(&rle_bytes);
+                printf("# rle bytes: %lu\n", num_bytes);
+	        assert(rle_bytes != NULL);
+                assert(num_bytes == 8);
+
+	        //fast_bitstring::byte derle_bytes[sizeof(bytes)];
+                //TODO: fbs.run_length_decode(rle_bytes, num_bytes);
+                //TODO: fbs.compare()
+	        //assert(strncmp((const char *)bytes, (const char *)derle_bytes, sizeof(bytes)) == 0);
+
+        }
 
 	return 1;
 }
@@ -151,12 +193,16 @@ int test_rle() {
 int unit_test() {
 
 	printf("Running unit tests...\n");
-	//assert(test_create());
-	//assert(test_bits());
-	//assert(test_save());
-	//assert(test_to_file());
-	//assert(test_to_byte());
-	//assert(test_to_bytes());
+
+if (2) {
+	assert(test_create());
+	assert(test_bits());
+	assert(test_save());
+	assert(test_to_file());
+        // TODO: more comprehensive test_to_byte?
+	assert(test_to_byte());
+	assert(test_to_bytes());
+}
 	assert(test_rle());
 
 	return 0;

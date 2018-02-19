@@ -79,16 +79,16 @@ public:
 		register byte *bp = bits;
                 size_t n = 0;
 
-		for (size_t i = offset; i < end; ++i) {
+		for (size_t i = offset; i < end;) {
                         b  = 0;
-			b |= (*bap++ & 1) << 7;
-                        if (++i < end) b |= (*bap++ & 1) << 6;
-			if (++i < end) b |= (*bap++ & 1) << 5;
-			if (++i < end) b |= (*bap++ & 1) << 4;
-			if (++i < end) b |= (*bap++ & 1) << 3;
-			if (++i < end) b |= (*bap++ & 1) << 2;
-			if (++i < end) b |= (*bap++ & 1) << 1;
-			if (++i < end) b |= (*bap++ & 1) << 0;
+			if (i++ < end) b |= (*bap++ & 1) << 7;
+                        if (i++ < end) b |= (*bap++ & 1) << 6;
+			if (i++ < end) b |= (*bap++ & 1) << 5;
+			if (i++ < end) b |= (*bap++ & 1) << 4;
+			if (i++ < end) b |= (*bap++ & 1) << 3;
+			if (i++ < end) b |= (*bap++ & 1) << 2;
+			if (i++ < end) b |= (*bap++ & 1) << 1;
+			if (i++ < end) b |= (*bap++ & 1) << 0;
 			*bp++ = b;
                         n++;
 		}
@@ -123,34 +123,36 @@ public:
 	}
 
         //
-        // Adaptive Run Length Encoding Format:
+        // Adaptive Run Length Encoding
         //
-        //      - Byte-level encoded; no header.
+        // Format:
+        //      - Byte-level encoded, starting with first byte (no other header).
         //      - If byte > 128 then byte represents (byte - 128) 1 bits.
         //      - If byte is < 128 then byte represents byte 0 bits.
         //      - If byte == 128 then the *next* byte is the count of the following
-        //        literal bits packed into bytes, where the count 1...256 mapped to
-        //        0...255 so we don't losse a bit.
+        //        verbatim bits packed into bytes, where the count 1...256 is mapped
+        //        to 0...255 so we don't loose a bit.
         //      - When calculating a run, it must be 9 bits or longer otherwise it is
-        //        deemed unfit to be a run and is appended to the current run of literal
+        //        deemed unfit to be a run and is appended to the current run of verbatim
         //        bits.
         //
-        // Can we estimate the length of the final RLE so we don't have to realloc or be too
-        // conservative.
-        //
-        // Returns the number of bytes bit was encoded to, and if the input is non-null then
-        // a pointer to the encoded bits as a byte array.
+        // Returns:
+        //      - The number of bytes the bit string was encoded into.
+        //      - If the "encoding" argument is non-null then a pointer to the encoded bits
+        //        encoded as a byte array is passed back via this pararmeter. The caller takes
+        //        ownership of the allocated memory and is responsible for freeing it.
         //
         size_t run_length_encode(byte **encoding) const {
 
                 const size_t len = this->blength - 1;   // RLE looks one ahead, so stop before last bit.
-                size_t  run_len;                        // Length of the current run.
-                fbs     verbatim_bits(256);             // Current run of verbatim bits.
-                size_t  v = 0;                          // Index into current run of verbatim bits.
                 byte *  bits = this->barray;            // Bits being run-length encoded.
                 size_t  b = 0;                          // Index of current RLE byte
+                size_t  run_len;                        // Length of the current run.
+                fbs     verbatim_bits(32);              // Current run of verbatim bits (32 bytes).
+                size_t  v = 0;                          // Index into current run of verbatim bits.
+                size_t  h;                              // Start of next segment being analyzed.
 
-                // Worst case length is all of the this bit string's bits packed into
+                // Worst case length is all of the this bitstring's bits packed into
                 // bytes + the "128" sentinal bytes for each 256 bit verbatim segment +
                 // the count bytes for all 256 bit verbatim segments + 2 for rounding
                 // the divisions.
@@ -163,20 +165,21 @@ public:
                         printf("Worst case REL len: %lu\n", worst_case_rle_len);
                 }
 
-                // !!! Make sure last bit is not stranded (len is blength-1).
+                // NOTE: the index 'i' is incremented within the body of the loop below, in
+                // addition to in this for loop clause.
                 for (size_t i = 0; i < len; ++i) {
 
                         // Store starting index when checking for a new run, so if the run is too short
-                        // to be encoded we can know from where to start copying verbatim bits.
-                        size_t h = i;
+                        // to be encoded as a run we know from where to start copying verbatim bits.
+                        h = i;
 
                         // Calculate the current run length: a sequence of contiguous 1's or 0's.
-                        // TODO: need to allow a verbatim run to go up to 256, if possible.
                         for (run_len = 1; bits[i + 1] == bits[i] && run_len < 127 && i < len; ++i) {
                                 run_len += 1;
                         }
 
-                        if (run_len > 8) {
+                        // If run is sufficently long or the input is 8 bits or less, process the run.
+                        if (run_len > 8 || len < 8) {
                                 // Store any residual verbatim bits before appending the new run.
 
                                 if (v > 0) {

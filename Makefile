@@ -1,7 +1,7 @@
 #
 # Makefile
 #
-CCFLAGS = -g -I . -DDEBUG=1 -DTRACE=1
+CCFLAGS = -O2 -I . -DDEBUG=1 -DTRACE=1
 LIBPATH =
 LIBS = -lstdc++
 SRCS = fast_bitstring.cpp main.cpp test.cpp

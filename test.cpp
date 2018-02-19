@@ -162,7 +162,7 @@ int test_rle() {
 
         if (1) {
 	        fast_bitstring::byte bytes[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-	        fast_bitstring fbs(bytes, sizeof(bytes));
+	        fast_bitstring fbs(bytes, 0, (sizeof(bytes) * 8) - 1);
                 fast_bitstring::byte *rle_bytes = NULL;
 	        size_t num_bytes = fbs.run_length_encode(&rle_bytes);
                 printf("# RLE bytes: %lu\n", num_bytes);

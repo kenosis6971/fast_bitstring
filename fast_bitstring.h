@@ -168,6 +168,7 @@ public:
                 }
 
 #define PROCESS_VERBATIM_BITS                                                           \
+                                                                                        \
         rle_bytes[b++] = 128;                                                           \
                                                                                         \
         /* Store bytes at [b + 1] to leave room for the actual byte count */            \
@@ -223,17 +224,7 @@ public:
                                                 // verbatim bits is full so append them to the rle bytes.
                                                 if (DEBUG) printf("VFBS full: appending 128 verbatim bits.\n");
 
-                                                rle_bytes[b++] = 128;
-
-                                                // Store bytes at b + 1 to leave room for the actual byte count
-                                                // to come after the 128 sentinal and before the verbatim bits.
-                                                size_t y = verbatim_bits.to_bytes(&rle_bytes[b + 1], 0, v);
-                                                assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));
-
-                                                rle_bytes[b++] = (byte)(v - 1); // map from 1...256 to 0...255
-                                                b += y;
-                                                assert(b <= worst_case_rle_len);
-                                                v = 0;
+                                                PROCESS_VERBATIM_BITS
                                         }
                                         verbatim_bits[v++] = bits[h++];
                                 }

@@ -67,7 +67,7 @@ public:
 	}
 
 	// Convert internal byte per bit representation back to bits packed into
-	// given byte array.
+	// the given byte array.
 	size_t to_bytes(byte *bits, size_t offset=0, size_t num_bits=0) const {
 
 		if (num_bits == 0 || num_bits > blength)
@@ -167,6 +167,18 @@ public:
                         printf("Worst case REL len: %lu\n", worst_case_rle_len);
                 }
 
+#define PROCESS_VERBATIM_BITS                                                           \
+        rle_bytes[b++] = 128;                                                           \
+                                                                                        \
+        /* Store bytes at [b + 1] to leave room for the actual byte count */            \
+        /* byte to come after the 128 sentinal and before the verbatim bits. */         \
+        size_t y = verbatim_bits.to_bytes(&rle_bytes[b + 1], 0, v);                     \
+        assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));                                     \
+                                                                                        \
+        rle_bytes[b++] = (byte)(v - 1); // map from 1...256 to 0...255                  \
+        b += y;                                                                         \
+        v = 0;
+
                 // NOTE: the index 'i' is incremented within the body of the loop below, in
                 // addition to in this for loop clause.
                 for (size_t i = 0; i < len; ++i) {
@@ -190,16 +202,7 @@ public:
                                         if (DEBUG) printf("New run: appending %lu verbatim bits\n", v);
                                         assert(v <= 256);
 
-                                        rle_bytes[b++] = 128;
-
-                                        // Store bytes at [b + 1] to leave room for the actual byte count
-                                        // byte to come after the 128 sentinal and before the verbatim bits.
-                                        size_t y = verbatim_bits.to_bytes(&rle_bytes[b + 1], 0, v);
-                                        assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));
-
-                                        rle_bytes[b++] = (byte)(v - 1); // map from 1...256 to 0...255
-                                        b += y;
-                                        v = 0;
+                                        PROCESS_VERBATIM_BITS
                                 }
 
                                 // Append run encoded as a single byte: < 128 = run of 0's, > 128 = run of 1's

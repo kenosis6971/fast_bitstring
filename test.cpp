@@ -179,11 +179,8 @@ int test_rle() {
 	        assert(rle_bytes != NULL);
                 assert(num_bytes == 8);
 
-	        //fast_bitstring::byte derle_bytes[sizeof(bytes)];
-                //TODO: fbs.run_length_decode(rle_bytes, num_bytes);
-                //TODO: fbs.compare()
-	        //assert(strncmp((const char *)bytes, (const char *)derle_bytes, sizeof(bytes)) == 0);
-
+	        fast_bitstring *rld = fast_bitstring::run_length_decode(rle_bytes, num_bytes);
+                assert(fbs.compare(*rld) == 0);
         }
 
 	return 1;
@@ -194,7 +191,6 @@ int unit_test() {
 
 	printf("Running unit tests...\n");
 
-if (2) {
 	assert(test_create());
 	assert(test_bits());
 	assert(test_save());
@@ -202,7 +198,6 @@ if (2) {
         // TODO: more comprehensive test_to_byte?
 	assert(test_to_byte());
 	assert(test_to_bytes());
-}
 	assert(test_rle());
 
 	return 0;

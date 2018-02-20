@@ -29,6 +29,11 @@
 class fast_bitstring {
 
 protected:
+	fast_bitstring() : BITS_PER_BYTE(8) {
+                blength = 0;
+                barray = NULL;
+        }
+
         typedef fast_bitstring fbs;
 
 public:
@@ -65,6 +70,53 @@ public:
 	inline byte &operator [](const size_t i) const {
 		return barray[i];
 	}
+
+        size_t resize(size_t new_size, bool clear) {
+
+                if (new_size == this->blength) {
+                        if (clear) memset(this->barray, 0, this->blength);
+                        return this->blength;
+                }
+
+                this->barray = (byte *) realloc(this->barray, new_size);
+                this->blength = new_size;
+                if (clear) memset(this->barray, 0, this->blength);
+
+                return this->blength;
+        }
+
+        // TODO: Unit test needed.
+        int compare(const fast_bitstring &that) const {
+
+                if (this->blength < that.blength)
+                        return -1;
+                if (this->blength > that.blength)
+                        return 1;
+
+                for (size_t i = 0; i < this->blength; ++i) {
+                        if (!(this->barray[i] && that.barray[i]))
+                                return false;
+                }
+
+                return true;
+        }
+
+        // TODO: Unit test needed.
+        byte to_byte(size_t i) const {
+
+                size_t byte = 0;
+                size_t mask = 0x7;
+                size_t j = i + 8;
+
+                if (j >= this->blength) j = this->blength;
+
+                for (; i < j; ++i, mask >>= 1) {
+                        if (this->barray[i])
+                                byte |= mask;
+                }
+
+                return byte;
+        }
 
 	// Convert internal byte per bit representation back to bits packed into
 	// the given byte array.
@@ -248,22 +300,62 @@ tail:
                 return b;
         }
 
-        // TODO: This needs to be init tested.
-        byte to_byte(size_t i) const {
+        // See comments above for run_length_encode (above) for details.
+        static fast_bitstring *run_length_decode(byte *rle_bytes, size_t num_bytes) {
 
-                size_t byte = 0;
-                size_t mask = 0x7;
-                size_t j = i + 8;
+                // Calculate # of bits needed.
+                size_t bits_needed = 0, b, nvb, nby;
 
-                if (j >= this->blength) j = this->blength;
-
-                for (; i < j; ++i, mask >>= 1) {
-                        if (this->barray[i])
-                                byte |= mask;
+                for (b = 0; b < num_bytes; ) {
+                        if (rle_bytes[b] == 128) {
+                                // Count verbatim bits
+                                nvb = rle_bytes[b + 1];
+                                bits_needed += vb;
+                                // Compute stride to next RLE guide byte.
+                                nby = (nvb / 8) + ((nvb % 8) ? 1 : 0);
+                                b += (nby + 2);
+                        } else {
+                                vb = rle_bytes[b];
+                                if (vb > 128) vb -= 128;
+                                bits_needed += vb;
+                                b += 1;
+                        }
                 }
+                assert(b == num_bytes);
 
-                return byte;
+                fbs *decoded_fbs = new fbs();
+                decoded_fbs->resize(bits_needed, true);
+                byte value;
+                size_t v;
+
+                for (b = 0; b < num_bytes; ) {
+                        if (rle_bytes[b] == 128) {
+                                // Decode verbatim bits...
+                                vb = rle_bytes[b + 1];
+                                // TODO do we want to create an append bit/byte method/operator?
+                                // Stride to next RLE guide byte.
+                                nb = (vb / 8) + ((vb % 8) ? 1 : 0);
+                                b += (nb + 2);
+                        } else {
+                                // Decode 1/0 run...
+                                vb = rle_bytes[b];
+                                if (vb > 128) {
+                                        vb -= 128;
+                                        value = 1;
+                                } else {
+                                        value = 0;
+                                }
+                                // TODO do we want to create an append bit/byte method/operator?
+
+                                // Stride to next guide byte
+                                b += 1;
+                        }
+                }
+                assert(b == num_bytes);
+
+                return decoded_fbs;
         }
+
 
 protected:
 
@@ -294,10 +386,7 @@ protected:
 	}
 
 private:
-
 	const size_t BITS_PER_BYTE;
-
-	fast_bitstring() : BITS_PER_BYTE(8) {}
 
 	size_t blength;	// length of bit array, one byte per bit.
 	byte *barray;   // Array of bits, one byte per bit.

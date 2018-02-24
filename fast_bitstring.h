@@ -315,9 +315,9 @@ tail:
                                 nby = (nvb / 8) + ((nvb % 8) ? 1 : 0);
                                 b += (nby + 2);
                         } else {
-                                vb = rle_bytes[b];
-                                if (vb > 128) vb -= 128;
-                                bits_needed += vb;
+                                nvb = rle_bytes[b];
+                                if (nvb > 128) nvb -= 128;
+                                bits_needed += nvb;
                                 b += 1;
                         }
                 }
@@ -331,16 +331,16 @@ tail:
                 for (b = 0; b < num_bytes; ) {
                         if (rle_bytes[b] == 128) {
                                 // Decode verbatim bits...
-                                vb = rle_bytes[b + 1];
+                                nvb = rle_bytes[b + 1];
                                 // TODO do we want to create an append bit/byte method/operator?
                                 // Stride to next RLE guide byte.
-                                nb = (vb / 8) + ((vb % 8) ? 1 : 0);
-                                b += (nb + 2);
+                                nby = (nvb / 8) + ((nvb % 8) ? 1 : 0);
+                                b += (nby + 2);
                         } else {
                                 // Decode 1/0 run...
-                                vb = rle_bytes[b];
-                                if (vb > 128) {
-                                        vb -= 128;
+                                nvb = rle_bytes[b];
+                                if (nvb > 128) {
+                                        nvb -= 128;
                                         value = 1;
                                 } else {
                                         value = 0;

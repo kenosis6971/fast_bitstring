@@ -310,7 +310,7 @@ tail:
                         if (rle_bytes[b] == 128) {
                                 // Count verbatim bits
                                 nvb = rle_bytes[b + 1];
-                                bits_needed += vb;
+                                bits_needed += nvb;
                                 // Compute stride to next RLE guide byte.
                                 nby = (nvb / 8) + ((nvb % 8) ? 1 : 0);
                                 b += (nby + 2);

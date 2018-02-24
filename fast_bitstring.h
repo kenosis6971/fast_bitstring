@@ -22,8 +22,12 @@
 #define FBS_DEBUG
 
 /*
- * If we encapsulate bit in a struct then we can overload = to ensure
+ * NOTES:
+ *
+ * - If we encapsulate bit in a struct then we can overload = to ensure
  * value is 0 or 1.
+ *
+ * - Convert in_bytes in constructor from bool to enum.
  */
 
 class fast_bitstring {
@@ -40,18 +44,18 @@ public:
 	typedef unsigned char byte;
 
 	// Construct bit array of all zero bits.
-	fast_bitstring(const size_t length_in_bytes) : BITS_PER_BYTE(8) {
-		blength = length_in_bytes * BITS_PER_BYTE;
+	fast_bitstring(const size_t length, const bool in_bytes=true) : BITS_PER_BYTE(8) {
+		blength = in_bytes ? (length * BITS_PER_BYTE) : length;
 		barray = (byte *)calloc(blength, 1);
 	}
 
 	// Construct bit array from given bit string backed in byte_array.
-	fast_bitstring(const byte byte_array[], const size_t length_in_bytes) : BITS_PER_BYTE(8) {
+	fast_bitstring(const byte *byte_array, const size_t length_in_bytes) : BITS_PER_BYTE(8) {
 		explode(byte_array, 0, length_in_bytes * BITS_PER_BYTE);
 	}
 
 	// Construct bit array from given bit string backed in byte_array.
-	fast_bitstring(const byte byte_array[], const size_t offset_in_bits, const size_t length_in_bits) : BITS_PER_BYTE(8) {
+	fast_bitstring(const byte *byte_array, const size_t offset_in_bits, const size_t length_in_bits) : BITS_PER_BYTE(8) {
 		explode(byte_array, offset_in_bits, length_in_bits);
 	}
 

@@ -28,5 +28,6 @@ distclean: clean
 test: clean all
 	./fbs test
 
-tags:
+tags: $(SRC)
+	-rm -f tags
 	ctags *.cpp *.h

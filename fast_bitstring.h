@@ -28,6 +28,9 @@
  * value is 0 or 1.
  *
  * - Convert in_bytes in constructor from bool to enum.
+ *
+ * - If we could ensure the bits were always 0 and 1 then we could use intrincics for comparison.
+ *   And alternative would be a fast compare whose contract is barrys={0|1}
  */
 
 class fast_bitstring {
@@ -42,10 +45,11 @@ protected:
 
 public:
 	typedef unsigned char byte;
+        typedef enum { FROM_BYTES, FROM_BITS } BIT_SOURCE;
 
 	// Construct bit array of all zero bits.
-	fast_bitstring(const size_t length, const bool in_bytes=true) : BITS_PER_BYTE(8) {
-		blength = in_bytes ? (length * BITS_PER_BYTE) : length;
+	fast_bitstring(const size_t length, const BIT_SOURCE bit_source=FROM_BYTES) : BITS_PER_BYTE(8) {
+		blength = bit_source == FROM_BYTES ? (length * BITS_PER_BYTE) : length;
 		barray = (byte *)calloc(blength, 1);
 	}
 
@@ -54,7 +58,7 @@ public:
 		explode(byte_array, 0, length_in_bytes * BITS_PER_BYTE);
 	}
 
-	// Construct bit array from given bit string backed in byte_array.
+	// Construct bit array from given bit string backed in byte_array, skipping the first "offset_in_bits" bits.
 	fast_bitstring(const byte *byte_array, const size_t offset_in_bits, const size_t length_in_bits) : BITS_PER_BYTE(8) {
 		explode(byte_array, offset_in_bits, length_in_bits);
 	}
@@ -305,7 +309,7 @@ tail:
         }
 
         // See comments above for run_length_encode (above) for details.
-        static fast_bitstring *run_length_decode(byte *rle_bytes, size_t num_bytes) {
+        static fast_bitstring *run_length_decode(const byte *rle_bytes, const size_t num_bytes) {
 
                 // Calculate # of bits needed.
                 size_t bits_needed = 0, b, nvb, nby;
@@ -316,29 +320,34 @@ tail:
                                 nvb = rle_bytes[b + 1];
                                 bits_needed += nvb;
                                 // Compute stride to next RLE guide byte.
-                                nby = (nvb / 8) + ((nvb % 8) ? 1 : 0);
+                                nby = (nvb / 8) + (((nvb > 8) && (nvb % 8)) ? 1 : 0);
+                                // Stride + 2 to account for guard and count bytes.
                                 b += (nby + 2);
                         } else {
-                                nvb = rle_bytes[b];
-                                if (nvb > 128) nvb -= 128;
+                                // Count 0|1 run bits.
+                                nvb = rle_bytes[b] & 0x7F;      // mask off high bit; we only care about the count.
                                 bits_needed += nvb;
                                 b += 1;
                         }
                 }
+                // Ensure all input bytes have been processed.
                 assert(b == num_bytes);
 
-                fbs *decoded_fbs = new fbs();
-                decoded_fbs->resize(bits_needed, true);
+                fbs *decoded_fbs = new fbs(bits_needed, FROM_BITS);
                 byte value;
                 size_t v;
 
-                for (b = 0; b < num_bytes; ) {
+                // Decode RLE bits into an fbs for easy continued use.
+                for (b = v = 0; b < num_bytes; ) {
                         if (rle_bytes[b] == 128) {
                                 // Decode verbatim bits...
                                 nvb = rle_bytes[b + 1];
-                                // TODO do we want to create an append bit/byte method/operator?
+                                fbs verbatim_bits(&rle_bytes[b + 2], nvb);
+                                size_t n_appended = decoded_fbs->append(v, verbatim_bits);
+                                assert(n_appended == nvb);
+                                v += n_appended;
                                 // Stride to next RLE guide byte.
-                                nby = (nvb / 8) + ((nvb % 8) ? 1 : 0);
+                                nby = (nvb / 8) + (((nvb > 8) && (nvb % 8)) ? 1 : 0);
                                 b += (nby + 2);
                         } else {
                                 // Decode 1/0 run...
@@ -349,8 +358,10 @@ tail:
                                 } else {
                                         value = 0;
                                 }
-                                // TODO do we want to create an append bit/byte method/operator?
-
+                                // Could optimize with an append_n_bits() method
+                                for (size_t i = 0; i < nvb; ++i) {
+                                        (*decoded_fbs)[v++] = value;
+                                }
                                 // Stride to next guide byte
                                 b += 1;
                         }
@@ -360,6 +371,61 @@ tail:
                 return decoded_fbs;
         }
 
+        // Append n bits from FBS "bits" onto this, starting at this[offset].
+        //
+        // Append does not expand the destination bit string to make room for extra data from bits.
+        //
+        // TODO: needs unit test
+        //
+        size_t append(size_t offset, fast_bitstring &bits, size_t n = 0) {
+
+                // If n == 0 then append all bits from "bits".
+                if (n == 0) n = bits.length();
+
+                // Check that we have capacity
+                if (offset + n > this->blength) {
+                        assert(offset + n <= this->blength);
+                        throw "Insufficient room to append bits.";
+                }
+
+                for (size_t i = 0, j = offset; i < n; ) {
+                        barray[j++] = bits[i++];
+                }
+
+                return n;
+        }
+
+
+/*
+        For future use (untested)
+
+        class iter {
+                private:
+                        iter() {}
+                        fast_bitstring *f;
+                        size_t i;
+
+                public:
+                        iter(fast_bitstring &bs, size_t starting_index) {
+                                f = &bs;
+                                i = starting_index;
+                        }
+
+                        iter& operator += (const bool b) {
+                                (*f)[i++] = b ? 1 : 0;
+                                return *this;
+                        }
+
+                        byte operator ()() {
+                                return (*f)[i++];
+                        }
+
+                        iter& next(byte &bit) {
+                                bit = (*f)[i++];
+                                return *this;
+                        }
+        };
+ */
 
 protected:
 
@@ -381,7 +447,8 @@ protected:
 			b = byte_array[i++];
 			for (mask = 0x80; mask && len; mask >>= 1) {
 				// Skip first "offset" bits.
-				if (o > 0) { --o; continue; }
+				// TODO: double check this offset skip logic, it may be defective.
+                                if (o > 0) { --o; continue; }
 				if (b & mask) *ba = 0x1;
 				++ba;
 				--len;

@@ -200,7 +200,7 @@ int unit_test() {
         // TODO: more comprehensive test_to_byte?
 	assert(test_to_byte());
 	assert(test_to_bytes());
-	//assert(test_rle());
+	assert(test_rle());
 
 	return 0;
 }

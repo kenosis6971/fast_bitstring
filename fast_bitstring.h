@@ -158,18 +158,24 @@ public:
 		return n;
 	}
 
-	size_t to_file(FILE *f = NULL, size_t n = ~0) const {
+	size_t to_file(FILE *f = NULL, size_t n = ~0, bool csv=false) const {
 
 		if (!f) f = stdout;
 
-		for (size_t i = 0; i < blength && i < n; ++i) {
-			fprintf (f, "%u ", (unsigned int)barray[i]);
+		if (n == ~0 || n > blength) n = blength;
+
+		for (size_t i = 0; i < n; ++i) {
+			if (csv) {
+				fprintf (f, "%u", (unsigned int)barray[i]);
+				if (i < (n - 1)) fputc(',', f);
+			} else
+				fprintf (f, "%u ", (unsigned int)barray[i]);
 		}
 		fprintf(f, "\n");
 
 		fflush(f);
 
-		return blength;
+		return n;
 	}
 
 	size_t save(const char *filename) const {

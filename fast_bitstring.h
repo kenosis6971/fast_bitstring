@@ -184,7 +184,7 @@ public:
 		byte *bits = (byte *)malloc(len);
 		to_bytes(bits);
 
-		int fd = open(filename, O_CREAT | O_WRONLY);
+		int fd = creat(filename, O_CREAT | O_WRONLY);
 		size_t n = write(fd, bits, len);
 		free(bits);
 		return n;

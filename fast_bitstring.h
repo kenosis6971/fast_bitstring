@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2017-2018 Ken Hilton, all rights reserved.
+ *
  *	fast_bitstring.h
  *
  *	Fast bit string converts a bit string packed into an array of bytes
@@ -37,15 +39,15 @@ class fast_bitstring {
 
 protected:
 	fast_bitstring() : BITS_PER_BYTE(8) {
-                blength = 0;
-                barray = NULL;
-        }
+		blength = 0;
+		barray = NULL;
+	}
 
-        typedef fast_bitstring fbs;
+	typedef fast_bitstring fbs;
 
 public:
 	typedef unsigned char byte;
-        typedef enum { FROM_BYTES, FROM_BITS } BIT_SOURCE;
+	typedef enum { FROM_BYTES, FROM_BITS } BIT_SOURCE;
 
 	// Construct bit array of all zero bits.
 	fast_bitstring(const size_t length, const BIT_SOURCE bit_source=FROM_BYTES) : BITS_PER_BYTE(8) {
@@ -79,52 +81,52 @@ public:
 		return barray[i];
 	}
 
-        size_t resize(size_t new_size, bool clear) {
+	size_t resize(size_t new_size, bool clear) {
 
-                if (new_size == this->blength) {
-                        if (clear) memset(this->barray, 0, this->blength);
-                        return this->blength;
-                }
+		if (new_size == this->blength) {
+			if (clear) memset(this->barray, 0, this->blength);
+			return this->blength;
+		}
 
-                this->barray = (byte *) realloc(this->barray, new_size);
-                this->blength = new_size;
-                if (clear) memset(this->barray, 0, this->blength);
+		this->barray = (byte *) realloc(this->barray, new_size);
+		this->blength = new_size;
+		if (clear) memset(this->barray, 0, this->blength);
 
-                return this->blength;
-        }
+		return this->blength;
+	}
 
-        // TODO: Unit test needed.
-        int compare(const fast_bitstring &that) const {
+	// TODO: Unit test needed.
+	int compare(const fast_bitstring &that) const {
 
-                if (this->blength < that.blength)
-                        return -1;
-                if (this->blength > that.blength)
-                        return 1;
+		if (this->blength < that.blength)
+			return -1;
+		if (this->blength > that.blength)
+			return 1;
 
-                for (size_t i = 0; i < this->blength; ++i) {
-                        if (!(this->barray[i] && that.barray[i]))
-                                return false;
-                }
+		for (size_t i = 0; i < this->blength; ++i) {
+			if (!(this->barray[i] && that.barray[i]))
+				return false;
+		}
 
-                return true;
-        }
+		return true;
+	}
 
-        // TODO: Unit test needed.
-        byte to_byte(size_t i) const {
+	// TODO: Unit test needed.
+	byte to_byte(size_t i) const {
 
-                size_t byte = 0;
-                size_t mask = 0x7;
-                size_t j = i + 8;
+		size_t byte = 0;
+		size_t mask = 0x7;
+		size_t j = i + 8;
 
-                if (j >= this->blength) j = this->blength;
+		if (j >= this->blength) j = this->blength;
 
-                for (; i < j; ++i, mask >>= 1) {
-                        if (this->barray[i])
-                                byte |= mask;
-                }
+		for (; i < j; ++i, mask >>= 1) {
+			if (this->barray[i])
+				byte |= mask;
+		}
 
-                return byte;
-        }
+		return byte;
+	}
 
 	// Convert internal byte per bit representation back to bits packed into
 	// the given byte array.
@@ -137,12 +139,12 @@ public:
 		register byte b;
 		register byte *bap = barray;
 		register byte *bp = bits;
-                size_t n = 0;
+		size_t n = 0;
 
 		for (size_t i = offset; i < end;) {
-                        b  = 0;
+			b  = 0;
 			if (i++ < end) b |= (*bap++ & 1) << 7;
-                        if (i++ < end) b |= (*bap++ & 1) << 6;
+			if (i++ < end) b |= (*bap++ & 1) << 6;
 			if (i++ < end) b |= (*bap++ & 1) << 5;
 			if (i++ < end) b |= (*bap++ & 1) << 4;
 			if (i++ < end) b |= (*bap++ & 1) << 3;
@@ -150,7 +152,7 @@ public:
 			if (i++ < end) b |= (*bap++ & 1) << 1;
 			if (i++ < end) b |= (*bap++ & 1) << 0;
 			*bp++ = b;
-                        n++;
+			n++;
 		}
 
 		return n;
@@ -182,249 +184,64 @@ public:
 		return n;
 	}
 
-        //
-        // Adaptive Run Length Encoding
-        //
-        // Format:
-        //      - Byte-level encoded, starting with first byte (no other header).
-        //      - If byte > 128 then byte represents (byte - 128) 1 bits.
-        //      - If byte is < 128 then byte represents byte 0 bits.
-        //      - If byte == 128 then the *next* byte is the count of the following
-        //        verbatim bits packed into bytes, where the count 1...256 is mapped
-        //        to 0...255 so we don't loose a bit.
-        //      - When calculating a run, it must be 8 bits or longer otherwise it is
-        //        deemed unfit to be a run and is appended to the current run of verbatim
-        //        bits.
-        //
-        // Returns:
-        //      - The number of bytes the bit string was encoded into.
-        //      - If the "encoding" argument is non-null then a pointer to the encoded bits
-        //        encoded as a byte array is passed back via this pararmeter. The caller takes
-        //        ownership of the allocated memory and is responsible for freeing it.
-        //
-        size_t run_length_encode(byte **encoding) const {
+	size_t run_length_encode(byte **encoding) const;
 
-                if (this->blength == 0) return 0;
+	static fast_bitstring *run_length_decode(const byte *rle_bytes, const size_t num_bytes);
 
-                const size_t len = this->blength - 1;   // RLE looks one ahead, so stop before last bit.
-                byte *  bits = this->barray;            // Bits being run-length encoded.
-                size_t  b = 0;                          // Index of current RLE byte
-                size_t  run_len;                        // Length of the current run.
-                fbs     verbatim_bits(32);              // Current run of verbatim bits (32 bytes).
-                size_t  v = 0;                          // Index into current run of verbatim bits.
-                size_t  h;                              // Start of next segment being analyzed.
+	// Append n bits from FBS "bits" onto this, starting at this[offset].
+	//
+	// Append does not expand the destination bit string to make room for extra data from bits.
+	//
+	// TODO: needs unit test
+	//
+	size_t append(size_t offset, fast_bitstring &bits, size_t n = 0) {
 
-                // Worst case length is all of the this bitstring's bits packed into
-                // bytes + the "128" sentinal bytes for each 256 bit verbatim segment +
-                // the count bytes for all 256 bit verbatim segments + 2 for rounding
-                // the divisions.
-                size_t  worst_case_rle_len = (this->blength / 8)         // bits packed into bytes
-                                           + ((this->blength / 256) * 2) // # of sentinal and count byte
-                                           + 2;                          // rounding for divisions
-                byte *  rle_bytes = (byte *)calloc(1, worst_case_rle_len);
+		// If n == 0 then append all bits from "bits".
+		if (n == 0) n = bits.length();
 
-                if (DEBUG) {
-                        printf("Worst case REL len: %lu\n", worst_case_rle_len);
-                }
+		// Check that we have capacity
+		if (offset + n > this->blength) {
+			assert(offset + n <= this->blength);
+			throw "Insufficient room to append bits.";
+		}
 
-#define PROCESS_VERBATIM_BITS                                                           \
-                                                                                        \
-        rle_bytes[b++] = 128;                                                           \
-                                                                                        \
-        /* Store bytes at [b + 1] to leave room for the actual byte count */            \
-        /* byte to come after the 128 sentinal and before the verbatim bits. */         \
-        size_t y = verbatim_bits.to_bytes(&rle_bytes[b + 1], 0, v);                     \
-        assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));                                     \
-                                                                                        \
-        rle_bytes[b++] = (byte)(v - 1); /* map from 1...256 to 0...255 */               \
-        b += y;                                                                         \
-        assert(b <= worst_case_rle_len);                                                \
-        v = 0;
+		for (size_t i = 0, j = offset; i < n; ) {
+			barray[j++] = bits[i++];
+		}
 
-                // NOTE: the index 'i' is incremented within the body of the loop below, in
-                // addition to in this for loop clause.
-                for (size_t i = 0; i < len; ++i) {
-
-                        // Store starting index when checking for a new run, so if the run is too short
-                        // to be encoded as a run we know from where to start copying verbatim bits.
-                        h = i;
-
-                        // Calculate the current run length: a sequence of contiguous 1's or 0's.
-                        for (run_len = 1; bits[i + 1] == bits[i] && run_len < 127 && i < len; ++i) {
-                                run_len += 1;
-                        }
-
-                        // If run is sufficently long RLE compress it.
-                        if (run_len >= 8) {
-
-                                // Store any residual verbatim bits before appending the new run.
-                                if (v > 0) {
-                                        if (DEBUG) printf("New run: appending %lu verbatim bits\n", v);
-                                        assert(v <= 256);
-
-                                        PROCESS_VERBATIM_BITS
-                                }
-
-                                // Append run encoded as a single byte: < 128 = run of 0's, > 128 = run of 1's
-                                if (DEBUG) printf("Appending run of %lu %c's\n", run_len, bits[h] ? '1' : '0');
-
-                                assert(run_len < 128);
-                                rle_bytes[b] = run_len;
-                                if (bits[h]) rle_bytes[b] += 128;
-                                b++;
-                                assert(b <= worst_case_rle_len);
-
-                        } else {
-                                // Append verbatim bits to the verbatim bits fbs.
-                                assert(run_len > 0);
-                                if (DEBUG) printf("Accumulating %lu verbatim bits\n", run_len);
-
-                                while (run_len-- > 0) {
-                                        if (v == 256) {
-                                                // verbatim bits is full so append them to the rle bytes.
-                                                if (DEBUG) printf("VFBS full: appending 128 verbatim bits.\n");
-
-                                                PROCESS_VERBATIM_BITS
-                                        }
-                                        verbatim_bits[v++] = bits[h++];
-                                }
-                        }
-                }
-tail:
-                if (v > 0) {
-                        // Finally, append any residual verbatim bits, which occurs if the tail
-                        // of the bit string did not end on a run.
-                        if (DEBUG) printf("Appending %lu residual verbatim bits.\n", v);
-
-                        PROCESS_VERBATIM_BITS
-                }
-
-                if (encoding)
-                        *encoding = rle_bytes;
-                else
-                        free(rle_bytes);
-
-                assert(b <= worst_case_rle_len);
-                return b;
-        }
-
-        // See comments above for run_length_encode (above) for details.
-        static fast_bitstring *run_length_decode(const byte *rle_bytes, const size_t num_bytes) {
-
-                // Calculate # of bits needed.
-                size_t bits_needed = 0, b, nvb, nby;
-
-                for (b = 0; b < num_bytes; ) {
-                        if (rle_bytes[b] == 128) {
-                                // Count verbatim bits
-                                nvb = rle_bytes[b + 1];
-                                bits_needed += nvb;
-                                // Compute stride to next RLE guide byte.
-                                nby = (nvb / 8) + (((nvb > 8) && (nvb % 8)) ? 1 : 0);
-                                // Stride + 2 to account for guard and count bytes.
-                                b += (nby + 2);
-                        } else {
-                                // Count 0|1 run bits.
-                                nvb = rle_bytes[b] & 0x7F;      // mask off high bit; we only care about the count.
-                                bits_needed += nvb;
-                                b += 1;
-                        }
-                }
-                // Ensure all input bytes have been processed.
-                assert(b == num_bytes);
-
-                fbs *decoded_fbs = new fbs(bits_needed, FROM_BITS);
-                byte value;
-                size_t v;
-
-                // Decode RLE bits into an fbs for easy continued use.
-                for (b = v = 0; b < num_bytes; ) {
-                        if (rle_bytes[b] == 128) {
-                                // Decode verbatim bits...
-                                nvb = rle_bytes[b + 1];
-                                fbs verbatim_bits(&rle_bytes[b + 2], nvb);
-                                size_t n_appended = decoded_fbs->append(v, verbatim_bits);
-                                assert(n_appended == nvb);
-                                v += n_appended;
-                                // Stride to next RLE guide byte.
-                                nby = (nvb / 8) + (((nvb > 8) && (nvb % 8)) ? 1 : 0);
-                                b += (nby + 2);
-                        } else {
-                                // Decode 1/0 run...
-                                nvb = rle_bytes[b];
-                                if (nvb > 128) {
-                                        nvb -= 128;
-                                        value = 1;
-                                } else {
-                                        value = 0;
-                                }
-                                // Could optimize with an append_n_bits() method
-                                for (size_t i = 0; i < nvb; ++i) {
-                                        (*decoded_fbs)[v++] = value;
-                                }
-                                // Stride to next guide byte
-                                b += 1;
-                        }
-                }
-                assert(b == num_bytes);
-
-                return decoded_fbs;
-        }
-
-        // Append n bits from FBS "bits" onto this, starting at this[offset].
-        //
-        // Append does not expand the destination bit string to make room for extra data from bits.
-        //
-        // TODO: needs unit test
-        //
-        size_t append(size_t offset, fast_bitstring &bits, size_t n = 0) {
-
-                // If n == 0 then append all bits from "bits".
-                if (n == 0) n = bits.length();
-
-                // Check that we have capacity
-                if (offset + n > this->blength) {
-                        assert(offset + n <= this->blength);
-                        throw "Insufficient room to append bits.";
-                }
-
-                for (size_t i = 0, j = offset; i < n; ) {
-                        barray[j++] = bits[i++];
-                }
-
-                return n;
-        }
+		return n;
+	}
 
 
 /*
-        For future use (untested)
+	For future use (untested)
 
-        class iter {
-                private:
-                        iter() {}
-                        fast_bitstring *f;
-                        size_t i;
+	class iter {
+		private:
+			iter() {}
+			fast_bitstring *f;
+			size_t i;
 
-                public:
-                        iter(fast_bitstring &bs, size_t starting_index) {
-                                f = &bs;
-                                i = starting_index;
-                        }
+		public:
+			iter(fast_bitstring &bs, size_t starting_index) {
+				f = &bs;
+				i = starting_index;
+			}
 
-                        iter& operator += (const bool b) {
-                                (*f)[i++] = b ? 1 : 0;
-                                return *this;
-                        }
+			iter& operator += (const bool b) {
+				(*f)[i++] = b ? 1 : 0;
+				return *this;
+			}
 
-                        byte operator ()() {
-                                return (*f)[i++];
-                        }
+			byte operator ()() {
+				return (*f)[i++];
+			}
 
-                        iter& next(byte &bit) {
-                                bit = (*f)[i++];
-                                return *this;
-                        }
-        };
+			iter& next(byte &bit) {
+				bit = (*f)[i++];
+				return *this;
+			}
+	};
  */
 
 protected:
@@ -448,7 +265,7 @@ protected:
 			for (mask = 0x80; mask && len; mask >>= 1) {
 				// Skip first "offset" bits.
 				// TODO: double check this offset skip logic, it may be defective.
-                                if (o > 0) { --o; continue; }
+				if (o > 0) { --o; continue; }
 				if (b & mask) *ba = 0x1;
 				++ba;
 				--len;

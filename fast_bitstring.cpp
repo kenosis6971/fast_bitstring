@@ -32,15 +32,15 @@ size_t fast_bitstring::run_length_encode(byte **encoding) const {
 	if (this->blength == 0) return 0;
 
 	const size_t len = this->blength - 1;   // RLE looks one ahead, so stop before last bit.
-	byte *  bits = this->barray;	    // Bits being run-length encoded.
-	size_t  b = 0;			  // Index of current RLE byte
+	byte *  bits = this->barray;	    	// Bits being run-length encoded.
+	size_t  b = 0;			  	// Index of current RLE byte
 	size_t  run_len;			// Length of the current run.
-	fbs     verbatim_bits(32);	      // Current run of verbatim bits (32 bytes).
-	size_t  v = 0;			  // Index into current run of verbatim bits.
-	size_t  h;			      // Start of next segment being analyzed.
+	fbs     verbatim_bits(32);	      	// Current run of verbatim bits (32 bytes).
+	size_t  v = 0;			  	// Index into current run of verbatim bits.
+	size_t  h;			      	// Start of next segment being analyzed.
 
-	// Worst case length is all of the this bitstring's bits packed into
-	// bytes + the "128" sentinal bytes for each 256 bit verbatim segment +
+	// Worst case length is all of this bitstring's bits packed into bytes (verbatim
+	// encoded) + the "128" sentinal bytes for each 256 bit verbatim segment +
 	// the count bytes for all 256 bit verbatim segments + 2 for rounding
 	// the divisions.
 	size_t  worst_case_rle_len = (this->blength / 8)	 // bits packed into bytes
@@ -52,17 +52,19 @@ size_t fast_bitstring::run_length_encode(byte **encoding) const {
 		printf("Worst case REL len: %lu\n", worst_case_rle_len);
 	}
 
-#define PROCESS_VERBATIM_BITS							   \
+#define APPEND_VERBATIM_BITS							\
 										\
-rle_bytes[b++] = 128;							   \
+/* Append verbatim bits sentinal. */						\
+rle_bytes[b++] = 128;							   	\
 										\
-/* Store bytes at [b + 1] to leave room for the actual byte count */	    \
-/* byte to come after the 128 sentinal and before the verbatim bits. */	 \
-size_t y = verbatim_bits.to_bytes(&rle_bytes[b + 1], 0, v);		     \
-assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));				     \
+/* Store bytes at [b + 1] to leave room for the actual byte count */	    	\
+/* byte to come after the 128 sentinal and before the verbatim bits. */	 	\
+size_t y = verbatim_bits.to_bytes(&rle_bytes[b + 1], 0, v);		     	\
+assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));				     	\
 										\
-rle_bytes[b++] = (byte)(v - 1); /* map from 1...256 to 0...255 */	       \
-b += y;									 \
+/* map count from 1..256 to 0..255, insert after sentinal and before bytes */	\
+rle_bytes[b++] = (byte)(v - 1);							\
+b += y;									 	\
 assert(b <= worst_case_rle_len);						\
 v = 0;
 
@@ -87,7 +89,7 @@ v = 0;
 				if (DEBUG) printf("New run: appending %lu verbatim bits\n", v);
 				assert(v <= 256);
 
-				PROCESS_VERBATIM_BITS
+				APPEND_VERBATIM_BITS
 			}
 
 			// Append run encoded as a single byte: < 128 = run of 0's, > 128 = run of 1's
@@ -109,7 +111,7 @@ v = 0;
 					// verbatim bits is full so append them to the rle bytes.
 					if (DEBUG) printf("VFBS full: appending 128 verbatim bits.\n");
 
-					PROCESS_VERBATIM_BITS
+					APPEND_VERBATIM_BITS
 				}
 				verbatim_bits[v++] = bits[h++];
 			}
@@ -121,7 +123,7 @@ tail:
 		// of the bit string did not end on a run.
 		if (DEBUG) printf("Appending %lu residual verbatim bits.\n", v);
 
-		PROCESS_VERBATIM_BITS
+		APPEND_VERBATIM_BITS
 	}
 
 	if (encoding)

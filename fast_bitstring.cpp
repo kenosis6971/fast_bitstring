@@ -22,14 +22,17 @@
 //	bits.
 //
 // Returns:
-//      - The number of bytes the bit string was encoded into.
+//      - The number of bytes the bit string has been encoded into.
 //      - If the "encoding" argument is non-null then a pointer to the encoded bits
 //	encoded as a byte array is passed back via this pararmeter. The caller takes
 //	ownership of the allocated memory and is responsible for freeing it.
 //
 size_t fast_bitstring::run_length_encode(byte **encoding) const {
 
-	if (this->blength == 0) return 0;
+	if (this->blength == 0) {
+		if (encoding) *encoding = NULL;
+		return 0;
+	}
 
 	const size_t len = this->blength - 1;   // RLE looks one ahead, so stop before last bit.
 	byte *  bits = this->barray;	    	// Bits being run-length encoded.
@@ -120,7 +123,7 @@ v = 0;
 tail:
 	if (v > 0) {
 		// Finally, append any residual verbatim bits, which occurs if the tail
-		// of the bit string did not end on a run.
+		// of the bit string did not end on a run or 0's or 1's.
 		if (DEBUG) printf("Appending %lu residual verbatim bits.\n", v);
 
 		APPEND_VERBATIM_BITS
@@ -135,25 +138,35 @@ tail:
 	return b;
 }
 
-// See comments above for run_length_encode (above) for details.
+//
+// Decode an RLE encoded byte stream into an fast_bitstring.
+//
+// See comments for run_length_encode (above) for details.
+//
 fast_bitstring *fast_bitstring::run_length_decode(const byte *rle_bytes, const size_t num_bytes) {
 
-	// Calculate # of bits needed.
-	size_t bits_needed = 0, b, nvb, nby;
+	size_t	bits_needed = 0,
+		b,			// tmp variable
+		stride,			// number of bytes to skip to the next RLE guide byte
+		nb,			// number of bits
+		nvb,			// number of virtual bits
+		nby;			// number bytes
 
+	// Calculate total # of bits needed for the decoding.
 	for (b = 0; b < num_bytes; ) {
 		if (rle_bytes[b] == 128) {
 			// Count verbatim bits
 			nvb = rle_bytes[b + 1];
 			bits_needed += nvb;
-			// Compute stride to next RLE guide byte.
-			nby = (nvb / 8) + (((nvb > 8) && (nvb % 8)) ? 1 : 0);
-			// Stride + 2 to account for guard and count bytes.
-			b += (nby + 2);
+			// Compute stride to next RLE guide byte, ie, skip over encoded verbatim bytes.
+			stride = (nvb / 8) + (((nvb < 8) || (nvb % 8)) ? 1 : 0);
+			// Stride + 2 to account for guide and count bytes.
+			b += (stride + 2);
 		} else {
 			// Count 0|1 run bits.
-			nvb = rle_bytes[b] & 0x7F;      // mask off high bit; we only care about the count.
-			bits_needed += nvb;
+			nb = rle_bytes[b] & 0x7F;	// Mask off indicator (high) bit; we only care about the count here.
+			bits_needed += nb;
+			// Move to next guide byte
 			b += 1;
 		}
 	}
@@ -162,20 +175,20 @@ fast_bitstring *fast_bitstring::run_length_decode(const byte *rle_bytes, const s
 
 	fbs *decoded_fbs = new fbs(bits_needed, FROM_BITS);
 	byte value;
-	size_t v;
+	size_t v;	// index to next decoded bit
 
-	// Decode RLE bits into an fbs for easy continued use.
+	// Decode RLE bits into an fbs for continued use.
 	for (b = v = 0; b < num_bytes; ) {
 		if (rle_bytes[b] == 128) {
 			// Decode verbatim bits...
 			nvb = rle_bytes[b + 1];
-			fbs verbatim_bits(&rle_bytes[b + 2], nvb);
+			fbs verbatim_bits(&rle_bytes[b + 2], nvb, FROM_BITS);
 			size_t n_appended = decoded_fbs->append(v, verbatim_bits);
 			assert(n_appended == nvb);
 			v += n_appended;
 			// Stride to next RLE guide byte.
-			nby = (nvb / 8) + (((nvb > 8) && (nvb % 8)) ? 1 : 0);
-			b += (nby + 2);
+			stride = (nvb / 8) + (((nvb < 8) || (nvb % 8)) ? 1 : 0);
+			b += (stride + 2);
 		} else {
 			// Decode 1/0 run...
 			nvb = rle_bytes[b];
@@ -185,7 +198,7 @@ fast_bitstring *fast_bitstring::run_length_decode(const byte *rle_bytes, const s
 			} else {
 				value = 0;
 			}
-			// Could optimize with an append_n_bits() method
+			// Could refactor this with an append_n_bits() method or a memset() call.
 			for (size_t i = 0; i < nvb; ++i) {
 				(*decoded_fbs)[v++] = value;
 			}

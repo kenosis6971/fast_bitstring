@@ -182,8 +182,10 @@ fast_bitstring *fast_bitstring::run_length_decode(const byte *rle_bytes, const s
 		if (rle_bytes[b] == 128) {
 			// Decode verbatim bits...
 			nvb = rle_bytes[b + 1];
+			printf("nvb: %lu\n", nvb);
 			fbs verbatim_bits(&rle_bytes[b + 2], nvb, FROM_BITS);
 			size_t n_appended = decoded_fbs->append(v, verbatim_bits);
+			printf("n_appended: %lu, verbatim_bits: %lu\n", n_appended, verbatim_bits.length());
 			assert(n_appended == nvb);
 			v += n_appended;
 			// Stride to next RLE guide byte.
@@ -193,7 +195,7 @@ fast_bitstring *fast_bitstring::run_length_decode(const byte *rle_bytes, const s
 			// Decode 1/0 run...
 			nvb = rle_bytes[b];
 			if (nvb > 128) {
-				nvb -= 128;
+				nvb &= 0x7F;
 				value = 1;
 			} else {
 				value = 0;

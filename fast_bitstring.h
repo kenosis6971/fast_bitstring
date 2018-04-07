@@ -210,6 +210,7 @@ public:
 
 		// Check that we have capacity
 		if (offset + n > this->blength) {
+			printf("off/len/blen: %lu, %lu, %lu\n", offset, n, this->blength);
 			assert(offset + n <= this->blength);
 			throw "Insufficient room to append bits.";
 		}

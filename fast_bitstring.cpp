@@ -69,27 +69,27 @@ assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));				     	\
 rle_bytes[b++] = (byte)(v - 1);							\
 b += y;									 	\
 assert(b <= worst_case_rle_len);						\
-if (DEBUG) printf("EVB: %lu\n", v);						\
+if (DEBUG) printf("AV: %2lu v's\n", v);						\
 v = 0;
 
 	// NOTE: the index 'i' is incremented within the body of the loop below, in
 	// addition to in this for loop clause.
-	for (size_t i = 0; i < len; ++i) {
+	size_t i;
+	for (i = 0; i < len; ++i) {
 
 		// Store starting index when checking for a new run, so if the run is too short
 		// to be encoded as a run we know from where to start copying verbatim bits.
 		h = i;
 
 		// Calculate the current run length: a sequence of contiguous 1's or 0's.
-		for (run_len = 1; bits[i] == bits[i + 1] && run_len < 128 && i < len; ++i) {
+		for (run_len = 1; i < len && bits[i] == bits[i + 1] && run_len < 128; ++i) {
 			run_len += 1;
 		}
 
 		if (TRACE) printf("Gathered run of length %lu\n", run_len);
 
 		// If run is sufficently long RLE compress it, if not add it to the verbatim
-		// bits so as to ammortize out the memory cost of verbatim bits taking 2 bytes
-		// to account for.
+		// bits so as to ammortize out the memory cost of verbatim bits accounting bytes.
 		if (run_len > 8) {
 
 			// Store any residual verbatim bits before appending the new run.
@@ -101,7 +101,7 @@ v = 0;
 			}
 
 			// Append run encoded as a single byte: < 128 = run of 0's, > 128 = run of 1's
-			if (DEBUG) printf("RLE: %lu %c's\n", run_len, bits[h] ? '1' : '0');
+			if (DEBUG) printf("AR: %2lu %c's\n", run_len, bits[h] ? '1' : '0');
 			if (TRACE) printf("Appending run of %lu %c's\n", run_len, bits[h] ? '1' : '0');
 
 			assert(run_len < 128);
@@ -128,6 +128,16 @@ v = 0;
 		}
 	}
 tail:
+	while (i < this->blength ) {
+		if (v == 128) {
+			// verbatim bits is full so append them to the rle bytes.
+			if (TRACE) printf("VFBS full: appending 128 verbatim bits.\n");
+
+			APPEND_VERBATIM_BITS
+		}
+		verbatim_bits[v++] = bits[i++];
+	}
+
 	if (v > 0) {
 		// Finally, append any residual verbatim bits, which occurs if the tail
 		// of the bit string did not end on a run or 0's or 1's.
@@ -135,6 +145,8 @@ tail:
 
 		APPEND_VERBATIM_BITS
 	}
+
+	if (DEBUG) printf("EI: %lu\n", i);
 
 	if (encoding)
 		*encoding = rle_bytes;
@@ -163,7 +175,7 @@ fast_bitstring *fast_bitstring::run_length_decode(const byte *rle_bytes, const s
 	for (b = 0; b < num_bytes; ) {
 		if (rle_bytes[b] == 128) {
 			// Count verbatim bits
-			nvb = rle_bytes[b + 1];
+			nvb = rle_bytes[b + 1] + 1;
 			bits_needed += nvb;
 			// Compute stride to next RLE guide byte, ie, skip over encoded verbatim bytes.
 			stride = (nvb / 8) + (((nvb < 8) || (nvb % 8)) ? 1 : 0);
@@ -180,6 +192,8 @@ fast_bitstring *fast_bitstring::run_length_decode(const byte *rle_bytes, const s
 	// Ensure all input bytes have been processed.
 	assert(b == num_bytes);
 
+	if (DEBUG) printf("Bits needed: %lu\n", bits_needed);
+
 	fbs *decoded_fbs = new fbs(bits_needed, FROM_BITS);
 	byte value;
 	size_t v;	// index to next decoded bit
@@ -188,12 +202,10 @@ fast_bitstring *fast_bitstring::run_length_decode(const byte *rle_bytes, const s
 	for (b = v = 0; b < num_bytes; ) {
 		if (rle_bytes[b] == 128) {
 			// Decode verbatim bits...
-			nvb = rle_bytes[b + 1];
-			printf("nvb: %lu\n", nvb);
+			nvb = rle_bytes[b + 1] + 1;	// verbatim count is stored less 1 to fit all 256 possible lengths.
 			fbs verbatim_bits(&rle_bytes[b + 2], 0, nvb);
 			size_t n_appended = decoded_fbs->append(v, verbatim_bits);
-			printf("n_appended: %lu, verbatim_bits: %lu\n", n_appended, verbatim_bits.length());
-			fflush(stdout);
+			if (DEBUG) printf("DV: %2lu (%lu)\n", n_appended, verbatim_bits.length());
 			assert(n_appended == nvb);
 			v += n_appended;
 			// Stride to next RLE guide byte.
@@ -208,6 +220,7 @@ fast_bitstring *fast_bitstring::run_length_decode(const byte *rle_bytes, const s
 			} else {
 				value = 0;
 			}
+			if (DEBUG) printf("DR: %2lu %d's\n", nvb, value);
 			// Could refactor this with an append_n_bits() method or a memset() call.
 			for (size_t i = 0; i < nvb; ++i) {
 				(*decoded_fbs)[v++] = value;

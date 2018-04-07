@@ -136,7 +136,7 @@ int test_rle() {
 
 	printf("\tTest rle...\n");
 
-        if (1) {
+        if (0) {
 	        fast_bitstring::byte bytes[] = {0x00};
 	        fast_bitstring fbs(bytes, sizeof(bytes));
                 fast_bitstring::byte *rle_bytes = NULL;
@@ -146,7 +146,7 @@ int test_rle() {
                 assert(num_bytes == 3);
         }
 
-        if (1) {
+        if (0) {
                 // A byte that is not a run of 0's or 1's
 	        fast_bitstring::byte bytes[] = {0x75};
 	        fast_bitstring fbs(bytes, sizeof(bytes));
@@ -157,7 +157,7 @@ int test_rle() {
                 assert(num_bytes == 3);
         }
 
-        if (1) {
+        if (0) {
                 // A 9 bit run: should still fit in one RLE byte.
 	        fast_bitstring::byte bytes[] = {0xFF, 0xFF};
 	        fast_bitstring fbs(bytes, 0, 9);
@@ -168,7 +168,7 @@ int test_rle() {
                 assert(num_bytes == 1);
         }
 
-        if (1) {
+        if (0) {
 	        fast_bitstring::byte bytes[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	        fast_bitstring fbs(bytes, 0, (sizeof(bytes) * 8) - 1);
                 fast_bitstring::byte *rle_bytes = NULL;
@@ -184,7 +184,7 @@ int test_rle() {
 	        fast_bitstring fbs(bytes, sizeof(bytes));
                 fast_bitstring::byte *rle_bytes = NULL;
 	        size_t num_bytes = fbs.run_length_encode(&rle_bytes);
-                printf("* # RLE bytes: %lu\n", num_bytes);
+                if (DEBUG || TRACE) printf("* # RLE bytes: %lu\n", num_bytes);
 	        assert(rle_bytes != NULL);
                 assert(num_bytes == 8);
 

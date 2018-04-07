@@ -51,7 +51,7 @@ size_t fast_bitstring::run_length_encode(byte **encoding) const {
 				   + 2;			  // rounding for divisions
 	byte *  rle_bytes = (byte *)calloc(1, worst_case_rle_len);
 
-	if (DEBUG) {
+	if (TRACE) {
 		printf("Worst case REL len: %lu\n", worst_case_rle_len);
 	}
 
@@ -69,6 +69,7 @@ assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));				     	\
 rle_bytes[b++] = (byte)(v - 1);							\
 b += y;									 	\
 assert(b <= worst_case_rle_len);						\
+if (DEBUG) printf("EVB: %lu\n", v);						\
 v = 0;
 
 	// NOTE: the index 'i' is incremented within the body of the loop below, in
@@ -80,23 +81,28 @@ v = 0;
 		h = i;
 
 		// Calculate the current run length: a sequence of contiguous 1's or 0's.
-		for (run_len = 1; bits[i + 1] == bits[i] && run_len < 127 && i < len; ++i) {
+		for (run_len = 1; bits[i] == bits[i + 1] && run_len < 128 && i < len; ++i) {
 			run_len += 1;
 		}
 
-		// If run is sufficently long RLE compress it.
-		if (run_len >= 8) {
+		if (TRACE) printf("Gathered run of length %lu\n", run_len);
+
+		// If run is sufficently long RLE compress it, if not add it to the verbatim
+		// bits so as to ammortize out the memory cost of verbatim bits taking 2 bytes
+		// to account for.
+		if (run_len > 8) {
 
 			// Store any residual verbatim bits before appending the new run.
 			if (v > 0) {
-				if (DEBUG) printf("New run: appending %lu verbatim bits\n", v);
+				if (TRACE) printf("Appending previous verbatim bit: %lu verbatim bits\n", v);
 				assert(v <= 256);
 
 				APPEND_VERBATIM_BITS
 			}
 
 			// Append run encoded as a single byte: < 128 = run of 0's, > 128 = run of 1's
-			if (DEBUG) printf("Appending run of %lu %c's\n", run_len, bits[h] ? '1' : '0');
+			if (DEBUG) printf("RLE: %lu %c's\n", run_len, bits[h] ? '1' : '0');
+			if (TRACE) printf("Appending run of %lu %c's\n", run_len, bits[h] ? '1' : '0');
 
 			assert(run_len < 128);
 			rle_bytes[b] = run_len;
@@ -107,12 +113,13 @@ v = 0;
 		} else {
 			// Append verbatim bits to the verbatim bits fbs.
 			assert(run_len > 0);
-			if (DEBUG) printf("Accumulating %lu verbatim bits\n", run_len);
+
+			if (TRACE) printf("Accumulating %lu verbatim bits\n", run_len);
 
 			while (run_len-- > 0) {
-				if (v == 256) {
+				if (v == 128) {
 					// verbatim bits is full so append them to the rle bytes.
-					if (DEBUG) printf("VFBS full: appending 128 verbatim bits.\n");
+					if (TRACE) printf("VFBS full: appending 128 verbatim bits.\n");
 
 					APPEND_VERBATIM_BITS
 				}
@@ -124,7 +131,7 @@ tail:
 	if (v > 0) {
 		// Finally, append any residual verbatim bits, which occurs if the tail
 		// of the bit string did not end on a run or 0's or 1's.
-		if (DEBUG) printf("Appending %lu residual verbatim bits.\n", v);
+		if (TRACE) printf("Appending %lu residual verbatim bits.\n", v);
 
 		APPEND_VERBATIM_BITS
 	}
@@ -183,9 +190,10 @@ fast_bitstring *fast_bitstring::run_length_decode(const byte *rle_bytes, const s
 			// Decode verbatim bits...
 			nvb = rle_bytes[b + 1];
 			printf("nvb: %lu\n", nvb);
-			fbs verbatim_bits(&rle_bytes[b + 2], nvb, FROM_BITS);
+			fbs verbatim_bits(&rle_bytes[b + 2], 0, nvb);
 			size_t n_appended = decoded_fbs->append(v, verbatim_bits);
 			printf("n_appended: %lu, verbatim_bits: %lu\n", n_appended, verbatim_bits.length());
+			fflush(stdout);
 			assert(n_appended == nvb);
 			v += n_appended;
 			// Stride to next RLE guide byte.

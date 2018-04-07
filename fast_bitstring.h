@@ -105,11 +105,13 @@ public:
 			return 1;
 
 		for (size_t i = 0; i < this->blength; ++i) {
-			if (!(this->barray[i] && that.barray[i]))
-				return false;
+			if (!this->barray[i] && that.barray[i])
+				return -1;
+			if (this->barray[i] && !that.barray[i])
+				return 1;
 		}
 
-		return true;
+		return 0;
 	}
 
 	// TODO: Unit test needed.

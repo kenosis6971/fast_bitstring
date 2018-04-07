@@ -31,6 +31,7 @@ size_t fast_bitstring::run_length_encode(byte **encoding) const {
 
 	if (this->blength == 0) {
 		if (encoding) *encoding = NULL;
+		printf("Empty FBS\n");
 		return 0;
 	}
 
@@ -48,7 +49,11 @@ size_t fast_bitstring::run_length_encode(byte **encoding) const {
 	// the divisions.
 	size_t  worst_case_rle_len = (this->blength / 8)	 // bits packed into bytes
 				   + ((this->blength / 256) * 2) // # of sentinal and count byte
-				   + 2;			  // rounding for divisions
+				   + 2;			  	 // rounding for divisions
+
+	// If encoding not requested then return # of bytes needed to store encoding.
+	if (!encoding) return worst_case_rle_len;
+
 	byte *  rle_bytes = (byte *)calloc(1, worst_case_rle_len);
 
 	if (TRACE) {
@@ -82,7 +87,7 @@ v = 0;
 		h = i;
 
 		// Calculate the current run length: a sequence of contiguous 1's or 0's.
-		for (run_len = 1; i < len && bits[i] == bits[i + 1] && run_len < 128; ++i) {
+		for (run_len = 1; i < len && bits[i] == bits[i + 1] && run_len < 127; ++i) {
 			run_len += 1;
 		}
 

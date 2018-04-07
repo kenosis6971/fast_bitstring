@@ -66,6 +66,18 @@ public:
 		explode(byte_array, offset_in_bits, length_in_bits);
 	}
 
+	fast_bitstring(char *filename) : BITS_PER_BYTE(8) {
+		FILE *f = fopen(filename, "rb");
+		fseek(f, 0L, SEEK_END);
+		size_t size = ftell(f);
+		byte *bytes = (byte *) calloc(1, size);
+		rewind(f);
+		if (fread(bytes, 1, size, f) != size) throw "Failed to read bytes for fast bitstring";
+		fclose(f);
+		explode(bytes, 0, size * BITS_PER_BYTE);
+		free(bytes);
+	}
+
 	~fast_bitstring() {
 		free(barray);
 		barray = NULL;

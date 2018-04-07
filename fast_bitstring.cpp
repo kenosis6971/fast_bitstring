@@ -43,18 +43,16 @@ size_t fast_bitstring::run_length_encode(byte **encoding) const {
 	size_t  v = 0;			  	// Index into current run of verbatim bits.
 	size_t  h;			      	// Start of next segment being analyzed.
 
-	// Worst case length is all of this bitstring's bits packed into bytes (verbatim
-	// encoded) + the "128" sentinal bytes for each 256 bit verbatim segment +
-	// the count bytes for all 256 bit verbatim segments + 2 for rounding
-	// the divisions.
-	size_t  worst_case_rle_len = (this->blength / 8)	 // bits packed into bytes
-				   + ((this->blength / 256) * 2) // # of sentinal and count byte
-				   + 2;			  	 // rounding for divisions
+	// Worst case length is all of this bitstring's bits encoded into verbatim bytes
+	// plus the sentinal bytes for each 256 bit verbatim segment plus the count bytes
+	// for all 256 bit verbatim segments + 2 for rounding the divisions.
+	size_t  worst_case_rle_len = ((this->blength / 8) + 1)	 	// all verbatim bits packed into bytes
+				   * (((this->blength / 256) + 1) * 2);	// + number of sentinal and count bytes
 
 	// If encoding not requested then return # of bytes needed to store encoding.
 	if (!encoding) return worst_case_rle_len;
 
-	byte *  rle_bytes = (byte *)calloc(1, worst_case_rle_len);
+	byte *rle_bytes = (byte *)calloc(1, worst_case_rle_len);
 
 	if (TRACE) {
 		printf("Worst case REL len: %lu\n", worst_case_rle_len);
@@ -73,6 +71,7 @@ assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));				     	\
 /* map count from 1..256 to 0..255, insert after sentinal and before bytes */	\
 rle_bytes[b++] = (byte)(v - 1);							\
 b += y;									 	\
+/*printf("*** b, wc rle: %lu, %lu\n", b, worst_case_rle_len);*/			\
 assert(b <= worst_case_rle_len);						\
 if (DEBUG) printf("AV: %2lu v's\n", v);						\
 v = 0;
@@ -122,7 +121,7 @@ v = 0;
 			if (TRACE) printf("Accumulating %lu verbatim bits\n", run_len);
 
 			while (run_len-- > 0) {
-				if (v == 128) {
+				if (v == 256) {
 					// verbatim bits is full so append them to the rle bytes.
 					if (TRACE) printf("VFBS full: appending 128 verbatim bits.\n");
 

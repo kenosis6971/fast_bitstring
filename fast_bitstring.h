@@ -81,6 +81,7 @@ public:
 	~fast_bitstring() {
 		free(barray);
 		barray = NULL;
+		blength = 0;
 	}
 
 	// Length of bit string in bits.

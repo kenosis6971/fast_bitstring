@@ -200,7 +200,7 @@ int test_rle() {
 	        fast_bitstring fbs((char *)"./test.bin");
 	        size_t worst_case_num_bytes = fbs.run_length_encode(NULL);
                 if (DEBUG || TRACE) printf("* # RLE bytes needed: %lu\n", worst_case_num_bytes);
-		fast_bitstring::byte *rle_bytes = (fast_bitstring::byte *)malloc(worst_case_num_bytes);
+		fast_bitstring::byte *rle_bytes = NULL;
 	        size_t num_bytes = fbs.run_length_encode(&rle_bytes);
 		printf("4\n");
                 if (DEBUG || TRACE) printf("* # RLE bytes used: %lu\n", num_bytes);
@@ -213,6 +213,8 @@ int test_rle() {
 			rld->to_file(NULL);
                         assert(fbs.compare(*rld) == 0);
                 }
+
+		free(rle_bytes);
         }
 
 	return 1;

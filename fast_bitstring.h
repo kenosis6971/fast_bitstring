@@ -21,6 +21,8 @@
 #include <unistd.h>
 
 
+#define FBS_DEBUG
+
 /*
  * NOTES:
  *

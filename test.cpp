@@ -70,14 +70,14 @@ int test_bits() {
 }
 
 
-int test_to_file() {
+int test_to_ascii() {
 
-	printf("\tTest to_file...\n");
+	printf("\tTest to_ascii...\n");
 
 	fast_bitstring::byte bytes[] = {0xFF, 0x55, 0x00, 0x55, 0xFF};
 	fast_bitstring fbs(bytes, sizeof(bytes));
 
-	fbs.to_file();
+	fbs.to_ascii();
 
 	return 1;
 }
@@ -190,8 +190,8 @@ int test_rle() {
 
                 if (1) {
 	                fast_bitstring *rld = fast_bitstring::run_length_decode(rle_bytes, num_bytes);
-			fbs.to_file(NULL);
-			rld->to_file(NULL);
+			fbs.to_ascii(NULL);
+			rld->to_ascii(NULL);
                         assert(fbs.compare(*rld) == 0);
                 }
         }
@@ -209,8 +209,8 @@ int test_rle() {
 
                 if (1) {
 	                fast_bitstring *rld = fast_bitstring::run_length_decode(rle_bytes, num_bytes);
-			fbs.to_file(NULL);
-			rld->to_file(NULL);
+			fbs.to_ascii(NULL);
+			rld->to_ascii(NULL);
                         assert(fbs.compare(*rld) == 0);
                 }
 
@@ -228,7 +228,7 @@ int unit_test() {
 	assert(test_create());
 	assert(test_bits());
 	assert(test_save());
-	assert(test_to_file());
+	assert(test_to_ascii());
         // TODO: more comprehensive test_to_byte?
 	assert(test_to_byte());
 	assert(test_to_bytes());

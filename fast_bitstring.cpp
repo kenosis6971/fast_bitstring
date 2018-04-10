@@ -66,7 +66,7 @@ rle_bytes[b++] = 128;							   	\
 /* Store bytes at [b + 1] to leave room for the actual byte count */	    	\
 /* byte to come after the 128 sentinal and before the verbatim bits. */	 	\
 size_t y = verbatim_bits.to_bytes(&rle_bytes[b + 1], 0, v);		     	\
-assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));				     	\
+/*assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));*/				     	\
 										\
 /* map count from 1..256 to 0..255, insert after sentinal and before bytes */	\
 rle_bytes[b++] = (byte)(v - 1);							\
@@ -133,7 +133,7 @@ v = 0;
 	}
 tail:
 	while (i < this->blength ) {
-		if (v == 128) {
+		if (v == 256) {
 			// verbatim bits is full so append them to the rle bytes.
 			if (TRACE) printf("VFBS full: appending 128 verbatim bits.\n");
 

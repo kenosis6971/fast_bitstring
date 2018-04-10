@@ -66,15 +66,13 @@ public:
 		explode(byte_array, offset_in_bits, length_in_bits);
 	}
 
-	// Construct bitstring from fil.
 	fast_bitstring(char *filename) : BITS_PER_BYTE(8) {
 		FILE *f = fopen(filename, "rb");
-		if (!f) throw "ctor: File not found.";
 		fseek(f, 0L, SEEK_END);
 		size_t size = ftell(f);
 		byte *bytes = (byte *) calloc(1, size);
 		rewind(f);
-		if (fread(bytes, 1, size, f) != size) throw "ctor: Failed to read bytes for fast bitstring.";
+		if (fread(bytes, 1, size, f) != size) throw "Failed to read bytes for fast bitstring";
 		fclose(f);
 		explode(bytes, 0, size * BITS_PER_BYTE);
 		free(bytes);
@@ -176,7 +174,7 @@ public:
 		return n;
 	}
 
-	size_t to_ascii(FILE *f = NULL, size_t n = ~0, bool csv=false) const {
+	size_t to_file(FILE *f = NULL, size_t n = ~0, bool csv=false) const {
 
 		if (!f) f = stdout;
 
@@ -198,24 +196,13 @@ public:
 
 	size_t save(const char *filename) const {
 
-		size_t len = (blength / 8) + ((blength % 8) ? 1 : 0);
-		byte *bytes = (byte *)malloc(len);
-		to_bytes(bytes);
+		size_t len = blength / 8;
+		byte *bits = (byte *)malloc(len);
+		to_bytes(bits);
 
 		int fd = creat(filename, O_CREAT | O_WRONLY);
-		size_t n = write(fd, bytes, len);
-		free(bytes);
-		return n;
-	}
-
-	size_t to_file(FILE *f) const {
-
-		size_t len = (blength / 8) + ((blength % 8) ? 1 : 0);
-		byte *bytes = (byte *)malloc(len);
-		to_bytes(bytes);
-
-		size_t n = fwrite(bytes, 1L, len, f);
-		free(bytes);
+		size_t n = write(fd, bits, len);
+		free(bits);
 		return n;
 	}
 

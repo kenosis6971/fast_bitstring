@@ -172,7 +172,7 @@ public:
 		return n;
 	}
 
-	size_t to_file(FILE *f = NULL, size_t n = ~0, bool csv=false) const {
+	size_t to_ascii(FILE *f = NULL, size_t n = ~0, bool csv=false) const {
 
 		if (!f) f = stdout;
 

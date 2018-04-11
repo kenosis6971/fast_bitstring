@@ -46,8 +46,8 @@ size_t fast_bitstring::run_length_encode(byte **encoding) const {
 	// Worst case length is all of this bitstring's bits encoded into verbatim bytes
 	// plus the sentinal bytes for each 256 bit verbatim segment plus the count bytes
 	// for all 256 bit verbatim segments + 2 for rounding the divisions.
-	size_t  worst_case_rle_len = ((this->blength / 8) * 2)	 	// all verbatim bits packed into bytes
-				   + (((this->blength / 256) + 1) * 2);	// + number of sentinal and count bytes
+	size_t  worst_case_rle_len = ((this->blength / 8) + 1)	 	// all verbatim bits packed into bytes
+				   + (((this->blength / 256) + 1) * 3);	// + number of sentinal and count bytes and an overflow for each segment.
 
 	// If encoding not requested then return # of bytes needed to store encoding.
 	if (!encoding) return worst_case_rle_len;

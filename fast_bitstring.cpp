@@ -46,8 +46,8 @@ size_t fast_bitstring::run_length_encode(byte **encoding) const {
 	// Worst case length is all of this bitstring's bits encoded into verbatim bytes
 	// plus the sentinal bytes for each 256 bit verbatim segment plus the count bytes
 	// for all 256 bit verbatim segments + 2 for rounding the divisions.
-	size_t  worst_case_rle_len = ((this->blength / 8) + 1)	 	// all verbatim bits packed into bytes
-				   * (((this->blength / 256) + 1) * 2);	// + number of sentinal and count bytes
+	size_t  worst_case_rle_len = ((this->blength / 8) * 2)	 	// all verbatim bits packed into bytes
+				   + (((this->blength / 256) + 1) * 2);	// + number of sentinal and count bytes
 
 	// If encoding not requested then return # of bytes needed to store encoding.
 	if (!encoding) return worst_case_rle_len;
@@ -66,12 +66,19 @@ rle_bytes[b++] = 128;							   	\
 /* Store bytes at [b + 1] to leave room for the actual byte count */	    	\
 /* byte to come after the 128 sentinal and before the verbatim bits. */	 	\
 size_t y = verbatim_bits.to_bytes(&rle_bytes[b + 1], 0, v);		     	\
-/*assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));*/				     	\
+if (y != ((v / 8) + ((v % 8) ? 1 : 0))) {				     	\
+	printf("to_bytes returned unexpected value: %lu\n", y);			\
+}										\
+assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));				     	\
 										\
 /* map count from 1..256 to 0..255, insert after sentinal and before bytes */	\
 rle_bytes[b++] = (byte)(v - 1);							\
 b += y;									 	\
 /*printf("*** b, wc rle: %lu, %lu\n", b, worst_case_rle_len);*/			\
+if (b > worst_case_rle_len) { \
+	printf("Unexpected b < worst_case_rle_len: %lu, %lu\n", b, worst_case_rle_len); \
+	fflush(stdout); \
+} \
 assert(b <= worst_case_rle_len);						\
 if (FBS_DEBUG) printf("AV: %2lu v's\n", v);					\
 v = 0;
@@ -123,7 +130,7 @@ v = 0;
 			while (run_len-- > 0) {
 				if (v == 256) {
 					// verbatim bits is full so append them to the rle bytes.
-					if (FBS_TRACE) printf("VFBS full: appending 128 verbatim bits.\n");
+					if (FBS_TRACE) printf("VFBS full: appending 256 verbatim bits.\n");
 
 					APPEND_VERBATIM_BITS
 				}

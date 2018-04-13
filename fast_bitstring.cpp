@@ -48,7 +48,7 @@ size_t fast_bitstring::run_length_encode(byte **encoding) const {
 	// for all 256 bit verbatim segments + 2 for rounding the divisions.
 	//size_t  worst_case_rle_len = ((this->blength / 8) + 1)	 	// all verbatim bits packed into bytes
 				   //+ (((this->blength / 256) + 1) * 3);	// + number of sentinal + count bytes + an overflow for each segment.
-	size_t worst_case_rle_len = (1 + 1 + 32) * ((this->blength / 256) + 1);
+	size_t worst_case_rle_len = (1 + 1 + 32) * ((this->blength / 32) + 1);
 
 	// If encoding not requested then return # of bytes needed to store encoding.
 	if (!encoding) return worst_case_rle_len;

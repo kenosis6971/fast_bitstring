@@ -10,6 +10,15 @@
 #include "fast_bitstring.h"
 
 
+static size_t file_size(const char *filename) {
+	FILE *f = fopen(filename, "rb");
+	fseek(f, 0L, SEEK_END);
+	size_t size = ftell(f);
+	fclose(f);
+	return size;
+}
+
+
 int test_create() {
 
 	printf("\tTest create...\n");
@@ -188,31 +197,25 @@ int test_rle() {
 	        assert(rle_bytes != NULL);
                 assert(num_bytes == 8);
 
-                if (1) {
-	                fast_bitstring *rld = fast_bitstring::run_length_decode(rle_bytes, num_bytes);
-			fbs.to_ascii(NULL);
-			rld->to_ascii(NULL);
-                        assert(fbs.compare(*rld) == 0);
-                }
+	        fast_bitstring *rld = fast_bitstring::run_length_decode(rle_bytes, num_bytes);
+                assert(fbs.compare(*rld) == 0);
         }
 
         if (1) {
 	        fast_bitstring fbs((char *)"./test.bin");
 	        size_t worst_case_num_bytes = fbs.run_length_encode(NULL);
-                if (FBS_DEBUG || FBS_TRACE) printf("* # RLE bytes needed: %lu\n", worst_case_num_bytes);
+                printf("* Worst case # of RLE bytes needed: %lu\n", worst_case_num_bytes);
 		fast_bitstring::byte *rle_bytes = NULL;
 	        size_t num_bytes = fbs.run_length_encode(&rle_bytes);
-		printf("4\n");
-                if (FBS_DEBUG || FBS_TRACE) printf("* # RLE bytes used: %lu\n", num_bytes);
+                printf("* # of RLE bytes actually used: %lu\n", num_bytes);
 	        assert(rle_bytes != NULL);
                 assert(num_bytes <= worst_case_num_bytes);
 
-                if (1) {
-	                fast_bitstring *rld = fast_bitstring::run_length_decode(rle_bytes, num_bytes);
-			fbs.to_ascii(NULL);
-			rld->to_ascii(NULL);
-                        assert(fbs.compare(*rld) == 0);
-                }
+		size_t fsz = file_size((char *)"./test.bin");
+		printf("Compression achieved: %lu/%lu = %0.4f\n", num_bytes, fsz, 100.0f * ((float)num_bytes / (float) fsz));
+
+	        fast_bitstring *rld = fast_bitstring::run_length_decode(rle_bytes, num_bytes);
+                assert(fbs.compare(*rld) == 0);
 
 		free(rle_bytes);
         }

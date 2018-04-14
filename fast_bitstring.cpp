@@ -4,6 +4,7 @@
 //	fast_bitstring.cpp
 //
 
+
 #include "fast_bitstring.h"
 
 
@@ -40,26 +41,27 @@ size_t fast_bitstring::run_length_encode(byte **encoding) const {
 	size_t  b = 0;			  	// Index of current RLE byte
 	size_t  run_len;			// Length of the current run.
 	fbs     verbatim_bits(32);	      	// Current run of verbatim bits (32 bytes).
-	size_t  v = 0;			  	// Index into current run of verbatim bits.
+	size_t  v;			  	// Index into current run of verbatim bits.
 	size_t  h;			      	// Start of next segment being analyzed.
+	size_t	i;
 
-	// Worst case length is all of this bitstring's bits encoded into verbatim bytes
-	// plus the sentinal bytes for each 256 bit verbatim segment plus the count bytes
-	// for all 256 bit verbatim segments + 2 for rounding the divisions.
-	//size_t  worst_case_rle_len = ((this->blength / 8) + 1)	 	// all verbatim bits packed into bytes
-				   //+ (((this->blength / 256) + 1) * 3);	// + number of sentinal + count bytes + an overflow for each segment.
-	size_t worst_case_rle_len = (1 + 1 + 32) * ((this->blength / 32) + 1);
+	// Worst case analysis: We could get an RLE of 9 followed by a verbatim string of
+	// 8, followed by a RLE of 9 then another verb str of 8, which leads to the true
+	// worst case, I think.  This could be approximated as VS's of 8 bits, which is
+	// then 3 bytes where 1 would have sufficed, which is then 3 * the # of 8 bit VS's.
+	size_t worst_case_rle_len = 3 * ((this->blength / 8) + 1);
 
 	// If encoding not requested then return # of bytes needed to store encoding.
 	if (!encoding) return worst_case_rle_len;
 
 	byte *rle_bytes = (byte *)calloc(1, worst_case_rle_len);
 
-	if (FBS_TRACE) {
-		printf("Worst case REL len: %lu\n", worst_case_rle_len);
-	}
+	if (FBS_TRACE) printf("Worst case REL len: %lu\n", worst_case_rle_len);
 
 #define APPEND_VERBATIM_BITS							\
+										\
+if (FBS_DEBUG) printf("AV: %3lu v's\n", v);					\
+assert(v <= 256);								\
 										\
 /* Append verbatim bits sentinal. */						\
 rle_bytes[b++] = 128;							   	\
@@ -67,27 +69,15 @@ rle_bytes[b++] = 128;							   	\
 /* Store bytes at [b + 1] to leave room for the actual byte count */	    	\
 /* byte to come after the 128 sentinal and before the verbatim bits. */	 	\
 size_t y = verbatim_bits.to_bytes(&rle_bytes[b + 1], 0, v);		     	\
-if (y != ((v / 8) + ((v % 8) ? 1 : 0))) {				     	\
-	printf("to_bytes returned unexpected value: %lu\n", y);			\
-}										\
 assert(y == ((v / 8) + ((v % 8) ? 1 : 0)));				     	\
 										\
-/* map count from 1..256 to 0..255, insert after sentinal and before bytes */	\
+/* map bit count of 1..256 to 0..255, insert after sentinal and before bytes */	\
 rle_bytes[b++] = (byte)(v - 1);							\
 b += y;									 	\
-/*printf("*** b, wc rle: %lu, %lu\n", b, worst_case_rle_len);*/			\
-if (b > worst_case_rle_len) { \
-	printf("Unexpected b < worst_case_rle_len: %lu, %lu\n", b, worst_case_rle_len); \
-	fflush(stdout); \
-} \
 assert(b <= worst_case_rle_len);						\
-if (FBS_DEBUG) printf("AV: %2lu v's\n", v);					\
 v = 0;
 
-	// NOTE: the index 'i' is incremented within the body of the loop below, in
-	// addition to in this for loop clause.
-	size_t i;
-	for (i = 0; i < len; ++i) {
+	for (i = v = 0; i < len; ++i) {
 
 		// Store starting index when checking for a new run, so if the run is too short
 		// to be encoded as a run we know from where to start copying verbatim bits.
@@ -104,16 +94,18 @@ v = 0;
 		// bits so as to ammortize out the memory cost of verbatim bits accounting bytes.
 		if (run_len > 8) {
 
+			assert(v <= 256);
+
 			// Store any residual verbatim bits before appending the new run.
 			if (v > 0) {
-				if (FBS_TRACE) printf("Appending previous verbatim bit: %lu verbatim bits\n", v);
+				if (FBS_TRACE) printf("Appending previous verbatim bits: %lu verbatim bits\n", v);
 				assert(v <= 256);
 
 				APPEND_VERBATIM_BITS
 			}
 
 			// Append run encoded as a single byte: < 128 = run of 0's, > 128 = run of 1's
-			if (FBS_DEBUG) printf("AR: %2lu %c's\n", run_len, bits[h] ? '1' : '0');
+			if (FBS_DEBUG) printf("AR: %3lu %c's\n", run_len, bits[h] ? '1' : '0');
 			if (FBS_TRACE) printf("Appending run of %lu %c's\n", run_len, bits[h] ? '1' : '0');
 
 			assert(run_len < 128);
@@ -129,9 +121,10 @@ v = 0;
 			if (FBS_TRACE) printf("Accumulating %lu verbatim bits\n", run_len);
 
 			while (run_len-- > 0) {
+				assert(v <= 256);
 				if (v == 256) {
 					// verbatim bits is full so append them to the rle bytes.
-					if (FBS_TRACE) printf("VFBS full: appending 256 verbatim bits.\n");
+					if (FBS_TRACE) printf("VFBS full: appending %lu verbatim bits.\n", v);
 
 					APPEND_VERBATIM_BITS
 				}
@@ -141,9 +134,10 @@ v = 0;
 	}
 tail:
 	while (i < this->blength ) {
+		assert(v <= 256);
 		if (v == 256) {
 			// verbatim bits is full so append them to the rle bytes.
-			if (FBS_TRACE) printf("VFBS full: appending 128 verbatim bits.\n");
+			if (FBS_TRACE) printf("VFBS full: appending %lu verbatim bits.\n", v);
 
 			APPEND_VERBATIM_BITS
 		}
@@ -151,6 +145,7 @@ tail:
 	}
 
 	if (v > 0) {
+		assert(v <= 256);
 		// Finally, append any residual verbatim bits, which occurs if the tail
 		// of the bit string did not end on a run or 0's or 1's.
 		if (FBS_TRACE) printf("Appending %lu residual verbatim bits.\n", v);
@@ -217,7 +212,8 @@ fast_bitstring *fast_bitstring::run_length_decode(const byte *rle_bytes, const s
 			nvb = rle_bytes[b + 1] + 1;	// verbatim count is stored less 1 to fit all 256 possible lengths.
 			fbs verbatim_bits(&rle_bytes[b + 2], 0, nvb);
 			size_t n_appended = decoded_fbs->append(v, verbatim_bits);
-			if (FBS_DEBUG) printf("DV: %2lu (%lu)\n", n_appended, verbatim_bits.length());
+			assert(n_appended <= 256);
+			if (FBS_DEBUG) printf("DV: %3lu (%lu)\n", n_appended, verbatim_bits.length());
 			assert(n_appended == nvb);
 			v += n_appended;
 			// Stride to next RLE guide byte.
@@ -232,7 +228,7 @@ fast_bitstring *fast_bitstring::run_length_decode(const byte *rle_bytes, const s
 			} else {
 				value = 0;
 			}
-			if (FBS_DEBUG) printf("DR: %2lu %d's\n", nvb, value);
+			if (FBS_DEBUG) printf("DR: %3lu %d's\n", nvb, value);
 			// Could refactor this with an append_n_bits() method or a memset() call.
 			for (size_t i = 0; i < nvb; ++i) {
 				(*decoded_fbs)[v++] = value;

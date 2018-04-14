@@ -3,3 +3,4 @@ fbs
 core
 *.swp
 tags
+*.bin

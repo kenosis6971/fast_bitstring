@@ -12,6 +12,10 @@
 #ifndef _FAST_BITSTRING_H
 #define _FAST_BITSTRING_H
 
+#if FBS_DEBUG
+#define DEBUG
+#endif
+
 #include <assert.h>
 #include <fcntl.h>
 #include <stddef.h>
@@ -144,18 +148,22 @@ public:
 
 	// Convert internal byte per bit representation back to bits packed into
 	// the given byte array.
-	size_t to_bytes(byte *bits, size_t offset=0, size_t num_bits=0) const {
+	size_t to_bytes(byte *bytes, size_t offset=0, size_t num_bits=0) const {
 
 		if (num_bits == 0 || num_bits > blength)
 			num_bits = blength;
 
+		if (!bytes) {
+			return (num_bits / 8) + ((num_bits < 8 || num_bits % 8) ? 1 : 0);
+		}
+
 		const size_t end = offset + num_bits;
 		register byte b;
 		register byte *bap = barray;
-		register byte *bp = bits;
+		register byte *bp = bytes;
 		size_t n = 0;
 
-		for (size_t i = offset; i < end;) {
+		for (size_t i = offset; i < end; ++n) {
 			b  = 0;
 			if (i++ < end) b |= (*bap++ & 1) << 7;
 			if (i++ < end) b |= (*bap++ & 1) << 6;
@@ -166,7 +174,6 @@ public:
 			if (i++ < end) b |= (*bap++ & 1) << 1;
 			if (i++ < end) b |= (*bap++ & 1) << 0;
 			*bp++ = b;
-			n++;
 		}
 
 		return n;
@@ -194,13 +201,16 @@ public:
 
 	size_t save(const char *filename) const {
 
-		size_t len = blength / 8;
-		byte *bits = (byte *)malloc(len);
-		to_bytes(bits);
+		size_t len = (blength / 8) + 1;
+		byte *bytes = (byte *)malloc(len);
+		to_bytes(bytes);
 
 		int fd = creat(filename, O_CREAT | O_WRONLY);
-		size_t n = write(fd, bits, len);
-		free(bits);
+		size_t n = write(fd, bytes, len);
+
+		close(fd);
+		free(bytes);
+
 		return n;
 	}
 

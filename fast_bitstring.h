@@ -80,6 +80,20 @@ public:
 		free(bytes);
 	}
 
+/*
+	// TODO: may want an offset here in the future to contruct from any subsegment of f.
+	fast_bitstring(fast_bitstring f, size_t length_in_bits) : BITS_PER_BYTE(8) {
+		blength = length_in_bits;
+		barray = (byte *)calloc(blength, 1);
+		
+		size_t n = blength < f.length() ? blength : f.length();
+		// TODO: use intrinsics via compiler flag.
+		for (size_t i = 0; i < n; ++i) {
+			barray[i] = f[i];
+		}
+	}
+*/
+
 	~fast_bitstring() {
 		free(barray);
 		barray = NULL;
@@ -97,7 +111,7 @@ public:
 		return barray[i];
 	}
 
-	size_t resize(size_t new_size, bool clear) {
+	size_t resize(size_t new_size, bool clear=false) {
 
 		if (new_size == this->blength) {
 			if (clear) memset(this->barray, 0, this->blength);

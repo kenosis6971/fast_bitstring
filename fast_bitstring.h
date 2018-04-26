@@ -85,7 +85,7 @@ public:
 	fast_bitstring(fast_bitstring f, size_t length_in_bits) : BITS_PER_BYTE(8) {
 		blength = length_in_bits;
 		barray = (byte *)calloc(blength, 1);
-		
+
 		size_t n = blength < f.length() ? blength : f.length();
 		// TODO: use intrinsics via compiler flag.
 		for (size_t i = 0; i < n; ++i) {
@@ -213,13 +213,14 @@ public:
 		return n;
 	}
 
-	size_t save(const char *filename) const {
+	size_t save(const char *filename, size_t nBits, bool deleteIfExists=true) const {
 
 		size_t len = (blength / 8) + 1;
 		byte *bytes = (byte *)malloc(len);
 		to_bytes(bytes);
 
-		int fd = creat(filename, O_CREAT | O_WRONLY);
+		if (deleteIfExists) unlink(filename);
+		nint fd = creat(filename, O_CREAT | O_WRONLY, );
 		size_t n = write(fd, bytes, len);
 
 		close(fd);

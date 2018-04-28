@@ -17,6 +17,7 @@
 #endif
 
 #include <assert.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -213,15 +214,32 @@ public:
 		return n;
 	}
 
-	size_t save(const char *filename, size_t nBits, bool deleteIfExists=true) const {
+	typedef	struct {
+		size_t length;
+		byte *bytes;
+	} save_header;
 
-		size_t len = (blength / 8) + 1;
+	size_t bit_count_to_byte_count(size_t n) const {
+		return (n / 8) + (((n < 8) || (n % 8)) ? 1 : 0);
+	}
+
+	int save(const char *filename, size_t n_bits = 0, save_header *header=NULL, bool deleteIfExists=true) const {
+
+		size_t n = 0;
+
+		if (n_bits == 0) n_bits = blength;
+
+		size_t len = bit_count_to_byte_count(n_bits);
 		byte *bytes = (byte *)malloc(len);
 		to_bytes(bytes);
 
 		if (deleteIfExists) unlink(filename);
-		nint fd = creat(filename, O_CREAT | O_WRONLY, );
-		size_t n = write(fd, bytes, len);
+		int fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY | O_APPEND, 0666);
+		if (fd < 1) return errno;
+
+		if (header) n += write(fd, header->bytes, header->length);
+
+		n += write(fd, bytes, len);
 
 		close(fd);
 		free(bytes);

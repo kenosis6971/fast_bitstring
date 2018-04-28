@@ -242,3 +242,7 @@ fast_bitstring *fast_bitstring::run_length_decode(const byte *rle_bytes, const s
 	return decoded_fbs;
 }
 
+size_t fast_bitstring::bit_count_to_byte_count(size_t n) {
+	return (n / 8) + (((n < 8) || (n % 8)) ? 1 : 0);
+}
+

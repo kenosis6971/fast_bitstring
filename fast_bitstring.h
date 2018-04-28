@@ -219,9 +219,7 @@ public:
 		byte *bytes;
 	} save_header;
 
-	size_t bit_count_to_byte_count(size_t n) const {
-		return (n / 8) + (((n < 8) || (n % 8)) ? 1 : 0);
-	}
+	static size_t bit_count_to_byte_count(size_t n);
 
 	int save(const char *filename, size_t n_bits = 0, save_header *header=NULL) const {
 

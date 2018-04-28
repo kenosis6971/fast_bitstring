@@ -223,7 +223,7 @@ public:
 		return (n / 8) + (((n < 8) || (n % 8)) ? 1 : 0);
 	}
 
-	int save(const char *filename, size_t n_bits = 0, save_header *header=NULL, bool deleteIfExists=true) const {
+	int save(const char *filename, size_t n_bits = 0, save_header *header=NULL) const {
 
 		size_t n = 0;
 
@@ -233,7 +233,7 @@ public:
 		byte *bytes = (byte *)malloc(len);
 		to_bytes(bytes);
 
-		if (deleteIfExists) unlink(filename);
+		unlink(filename);
 		int fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY | O_APPEND, 0666);
 		if (fd < 1) return errno;
 

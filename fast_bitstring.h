@@ -81,23 +81,22 @@ public:
 		free(bytes);
 	}
 
-/*
-	// TODO: may want an offset here in the future to contruct from any subsegment of f.
-	fast_bitstring(fast_bitstring f, size_t length_in_bits) : BITS_PER_BYTE(8) {
-		blength = length_in_bits;
+	fast_bitstring(fast_bitstring &f, size_t len) : BITS_PER_BYTE(8) {
+		if (len == ~0 || len > f.length()) len = f.length();
+		blength = len;
 		barray = (byte *)calloc(blength, 1);
 
-		size_t n = blength < f.length() ? blength : f.length();
 		// TODO: use intrinsics via compiler flag.
-		for (size_t i = 0; i < n; ++i) {
+		for (size_t i = 0, n = f.length(); i < n; ++i) {
 			barray[i] = f[i];
 		}
 	}
-*/
 
 	~fast_bitstring() {
-		free(barray);
-		barray = NULL;
+		if (barray) {
+			free(barray);
+			barray = NULL;
+		}
 		blength = 0;
 	}
 
@@ -106,6 +105,9 @@ public:
 
 	// Length of bit string in bits.
 	inline void clear() { memset((void *)barray, 0, blength); }
+
+	// Length of bit string in bits.
+	inline void set_all(byte val = 1) { memset((void *)barray, val, blength); }
 
 	// Array opperator to access bit[i].
 	inline byte &operator [](const size_t i) const {
@@ -142,6 +144,18 @@ public:
 		}
 
 		return 0;
+	}
+
+	// TODO: Unit test needed.
+	void reverse() {
+
+		register byte b;
+	
+		for (size_t i = 0, j = blength - 1; i < j; ++i, --j) {
+			b = barray[i];
+			barray[i] = barray[j];
+			barray[j] = b;	
+		}
 	}
 
 	// TODO: Unit test needed.

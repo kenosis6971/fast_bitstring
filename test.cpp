@@ -223,6 +223,21 @@ int test_rle() {
 	return 1;
 }
 
+int test_reverse() {
+
+	printf("\tTest reverse...\n");
+
+	fast_bitstring::byte bytes[] = {0xAA, 0xAA, 0xAA, 0xAA};
+	fast_bitstring::byte rbytes[] = {0x55, 0x55, 0x55, 0x55};
+	fast_bitstring fbs(bytes, sizeof(bytes));
+	fast_bitstring rfbs(rbytes, sizeof(rbytes));
+
+	fbs.reverse();
+	assert(fbs.compare(rfbs) == 0);
+
+	return 1;
+}
+
 
 int unit_test() {
 
@@ -236,6 +251,7 @@ int unit_test() {
 	assert(test_to_byte());
 	assert(test_to_bytes());
 	assert(test_rle());
+	assert(test_reverse());
 
 	return 0;
 }

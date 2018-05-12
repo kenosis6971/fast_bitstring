@@ -265,8 +265,7 @@ public:
 
 	// Append n bits from FBS "bits" onto this, starting at this[offset].
 	//
-	// Append does not expand the destination bit string to make room for extra data from bits.
-	//
+	// TODO: add an offset into bits.
 	// TODO: needs unit test
 	//
 	size_t append(size_t offset, fast_bitstring &bits, size_t n = 0) {
@@ -276,16 +275,18 @@ public:
 
 		// Check that we have capacity
 		if (offset + n > this->blength) {
+			// TODO: nice to have: expand to accommodate extra bits?
 			printf("off/len/blen: %lu, %lu, %lu\n", offset, n, this->blength);
 			assert(offset + n <= this->blength);
 			throw "Insufficient room to append bits.";
 		}
 
-		for (size_t i = 0, j = offset; i < n; ) {
+		size_t i = 0, j = offset;
+		for (i = 0, j = offset; i < n; ) {
 			barray[j++] = bits[i++];
 		}
 
-		return n;
+		return i;
 	}
 
 

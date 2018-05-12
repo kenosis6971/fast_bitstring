@@ -87,7 +87,7 @@ public:
 		barray = (byte *)calloc(blength, 1);
 
 		// TODO: use intrinsics via compiler flag.
-		for (size_t i = 0, n = f.length(); i < n; ++i) {
+		for (size_t i = 0; i < blength; ++i) {
 			barray[i] = f[i];
 		}
 	}

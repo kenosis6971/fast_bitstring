@@ -53,7 +53,7 @@ public:
 	typedef enum { FROM_BYTES, FROM_BITS } BIT_SOURCE;
 
 	// Construct bit array of all zero bits.
-	// TODO XXX does bit_source make sense for this constructor?
+	// TODO: XXX does bit_source make sense for this constructor?
 	fast_bitstring(const size_t length, const BIT_SOURCE bit_source=FROM_BYTES) : BITS_PER_BYTE(8) {
 		blength = bit_source == FROM_BYTES ? (length * BITS_PER_BYTE) : length;
 		barray = (byte *)calloc(blength, 1);
@@ -86,10 +86,10 @@ public:
 		blength = len;
 		barray = (byte *)calloc(blength, 1);
 
-		// TODO: use intrinsics via compiler flag.
-		for (size_t i = 0; i < blength; ++i) {
-			barray[i] = f[i];
-		}
+		//for (size_t i = 0; i < blength; ++i) {
+			//barray[i] = f[i];
+		//}
+		memcpy((void *)barray, (void *)&f[0], blength);
 	}
 
 	~fast_bitstring() {

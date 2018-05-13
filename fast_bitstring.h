@@ -81,7 +81,7 @@ public:
 		free(bytes);
 	}
 
-	fast_bitstring(fast_bitstring &f, size_t len) : BITS_PER_BYTE(8) {
+	fast_bitstring(fast_bitstring &f, size_t len = ~0) : BITS_PER_BYTE(8) {
 		if (len == ~0 || len > f.length()) len = f.length();
 		blength = len;
 		barray = (byte *)calloc(blength, 1);
@@ -150,11 +150,11 @@ public:
 	void reverse() {
 
 		register byte b;
-	
+
 		for (size_t i = 0, j = blength - 1; i < j; ++i, --j) {
 			b = barray[i];
 			barray[i] = barray[j];
-			barray[j] = b;	
+			barray[j] = b;
 		}
 	}
 

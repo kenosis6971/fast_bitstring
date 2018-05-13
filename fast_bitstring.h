@@ -86,9 +86,6 @@ public:
 		blength = len;
 		barray = (byte *)calloc(blength, 1);
 
-		//for (size_t i = 0; i < blength; ++i) {
-			//barray[i] = f[i];
-		//}
 		memcpy((void *)barray, (void *)&f[0], blength);
 	}
 

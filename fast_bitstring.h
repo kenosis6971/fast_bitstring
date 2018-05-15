@@ -81,12 +81,13 @@ public:
 		free(bytes);
 	}
 
-	fast_bitstring(fast_bitstring &f, size_t len = ~0) : BITS_PER_BYTE(8) {
-		if (len == ~0 || len > f.length()) len = f.length();
+	fast_bitstring(fast_bitstring &f, size_t len = ~0, size_t offset = 0) : BITS_PER_BYTE(8) {
+		if (len == ~0) len = f.length();
+		if (offset + len > f.length()) throw "Invalid copy constructor parameters: offset + length > copy source length.";
 		blength = len;
 		barray = (byte *)calloc(blength, 1);
 
-		memcpy((void *)barray, (void *)&f[0], blength);
+		memcpy((void *)barray, (void *)&f[offset], blength);
 	}
 
 	~fast_bitstring() {

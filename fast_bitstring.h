@@ -114,16 +114,16 @@ public:
 
 	size_t resize(size_t new_size, bool clear=false) {
 
-		if (new_size == this->blength) {
-			if (clear) memset(this->barray, 0, this->blength);
-			return this->blength;
+		if (new_size == blength) {
+			if (clear) memset(barray, 0, blength);
+			return blength;
 		}
 
-		this->barray = (byte *) realloc(this->barray, new_size);
-		this->blength = new_size;
-		if (clear) memset(this->barray, 0, this->blength);
+		barray = (byte *) realloc(barray, new_size);
+		blength = new_size;
+		if (clear) memset(barray, 0, blength);
 
-		return this->blength;
+		return blength;
 	}
 
 	// TODO: Unit test needed.

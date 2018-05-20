@@ -28,7 +28,7 @@
 //	encoded as a byte array is passed back via this pararmeter. The caller takes
 //	ownership of the allocated memory and is responsible for freeing it.
 //
-size_t fast_bitstring::run_length_encode(byte **encoding) const {
+size_t fast_bitstring::run_length_encode(byte **encoding, size_t n_bits) const {
 
 	if (this->blength == 0) {
 		if (encoding) *encoding = NULL;
@@ -36,13 +36,13 @@ size_t fast_bitstring::run_length_encode(byte **encoding) const {
 		return 0;
 	}
 
-	const size_t len = this->blength - 1;   // RLE looks one ahead, so stop before last bit.
-	byte *  bits = this->barray;	    	// Bits being run-length encoded.
-	size_t  b = 0;			  	// Index of current RLE byte
-	size_t  run_len;			// Length of the current run.
-	fbs     verbatim_bits(32);	      	// Current run of verbatim bits (32 bytes).
-	size_t  v;			  	// Index into current run of verbatim bits.
-	size_t  h;			      	// Start of next segment being analyzed.
+	const size_t len = n_bits ? n_bits - 1 : this->blength - 1;	// RLE looks one ahead, so stop before last bit.
+	byte *  bits = this->barray;	    				// Bits being run-length encoded.
+	size_t  b = 0;			  				// Index of current RLE byte
+	size_t  run_len;						// Length of the current run.
+	fbs     verbatim_bits(32);	      				// Current run of verbatim bits (32 bytes).
+	size_t  v;			  				// Index into current run of verbatim bits.
+	size_t  h;			      				// Start of next segment being analyzed.
 	size_t	i;
 
 	// Worst case analysis: We could get an RLE of 9 followed by a verbatim string of

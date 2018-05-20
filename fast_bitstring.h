@@ -258,7 +258,7 @@ public:
 		return n;
 	}
 
-	size_t run_length_encode(byte **encoding) const;
+	size_t run_length_encode(byte **encoding, size_t n_bits = 0) const;
 
 	static fast_bitstring *run_length_decode(const byte *rle_bytes, const size_t num_bytes);
 

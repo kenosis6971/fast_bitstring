@@ -251,6 +251,7 @@ public:
 		n += write(fd, bytes, len);
 
 		close(fd);
+		free(bytes);
 
 		return n;
 	}

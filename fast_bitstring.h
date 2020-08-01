@@ -102,10 +102,8 @@ public:
 	// Length of bit string in bits.
 	inline size_t length() const { return blength; }
 
-	// Length of bit string in bits.
 	inline void clear() { memset((void *)barray, 0, blength); }
 
-	// Length of bit string in bits.
 	inline void set_all(byte val = 1) { memset((void *)barray, val, blength); }
 
 	// Array opperator to access bit[i].
@@ -253,8 +251,6 @@ public:
 		n += write(fd, bytes, len);
 
 		close(fd);
-
-		free(bytes);
 
 		return n;
 	}

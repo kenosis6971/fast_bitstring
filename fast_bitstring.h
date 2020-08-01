@@ -60,12 +60,12 @@ public:
 		barray = (byte *)calloc(blength, 1);
 	}
 
-	// Construct bit array from given bit string backed in byte_array.
+	// Construct bit array from given bit string packed in byte_array.
 	fast_bitstring(const byte *byte_array, const size_t length_in_bytes) : BITS_PER_BYTE(8) {
 		explode(byte_array, 0, length_in_bytes * BITS_PER_BYTE);
 	}
 
-	// Construct bit array from given bit string backed in byte_array, skipping the first "offset_in_bits" bits.
+	// Construct bit array from given bit string packed in byte_array, skipping the first "offset_in_bits" bits.
 	fast_bitstring(const byte *byte_array, const size_t offset_in_bits, const size_t length_in_bits) : BITS_PER_BYTE(8) {
 		explode(byte_array, offset_in_bits, length_in_bits);
 	}
